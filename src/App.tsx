@@ -3,14 +3,15 @@ import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 
-function App() {
-  const [count, setCount] = useState(0)
+import WeeklyCalendar from "./components/WeeklyCalendar";
 
+function App() {
   return (
-    <div className="h-screen bg-gradient-to-br from-blue-100 to-indigo-200 flex items-center justify-center">
-      <h1 className="text-4xl font-bold text-indigo-800">Hello SIMTREE 🌱</h1>
+    <div className="min-h-screen bg-gray-50 p-4">
+      <h1 className="text-2xl font-bold mb-4">SIMTREE: Weekly Reflection</h1>
+      <WeeklyCalendar />
     </div>
-  );  
+  );
 }
 
-export default App
+export default App;
