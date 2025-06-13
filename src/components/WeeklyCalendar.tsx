@@ -1,15 +1,15 @@
-import React, { useState, useEffect } from "react";
-import { addDays, startOfWeek, format, isSameDay } from "date-fns";
+import React, { useState, useEffect, useRef } from "react";
+import { addDays, startOfWeek, format, isSameDay, setHours } from "date-fns";
 import EventModal from "./EventModal";
 import { db, auth } from "../lib/firebase";
-import { collection, getDocs, addDoc } from "firebase/firestore";
-import { signOut } from "firebase/auth";
+import { collection, getDocs, addDoc, deleteDoc, doc } from "firebase/firestore";
 
-const hours = Array.from({ length: 12 }, (_, i) => i + 7); // 7 AM to 6 PM
+const hours = Array.from({ length: 24 }, (_, i) => i); // 0 to 23
 
 type EventType = {
   id: string;
-  title: string;
+  title?: string;
+  entry: string;
   day: string;
   startHour: number;
   endHour: number;
@@ -22,10 +22,17 @@ export default function WeeklyCalendar() {
   const [events, setEvents] = useState<EventType[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [newEventSlot, setNewEventSlot] = useState<{ day: string; hour: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const user = auth.currentUser;
+  // Scroll to current hour on mount
+  useEffect(() => {
+    setTimeout(() => {
+      const nowHour = new Date().getHours();
+      const scrollTarget = containerRef.current?.querySelector(`[data-hour='${nowHour}']`);
+      scrollTarget?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 300);
+  }, []);
 
-  // Load events for current user
   useEffect(() => {
     const fetchEvents = async () => {
       const uid = auth.currentUser?.uid;
@@ -55,13 +62,38 @@ export default function WeeklyCalendar() {
     try {
       const uid = auth.currentUser?.uid;
       if (!uid) throw new Error("Not logged in");
-
-      const docRef = await addDoc(collection(db, "events"), { ...event, uid });
-      setEvents([...events, { ...event, id: docRef.id, uid }]);
+  
+      // Convert day to full yyyy-MM-dd format
+      const formattedDay = weekDates.find(d => format(d, "yyyy-MM-dd") === event.day);
+      if (!formattedDay) throw new Error("Invalid day");
+      
+      const eventWithFormattedDay = {
+        ...event,
+        day: format(formattedDay, "yyyy-MM-dd")
+      };
+  
+      const docRef = await addDoc(collection(db, "events"), { ...eventWithFormattedDay, uid });
+      setEvents([...events, { ...eventWithFormattedDay, id: docRef.id, uid }]);
       setModalOpen(false);
     } catch (err) {
       console.error("Error adding event:", err);
     }
+  };  
+
+  const handleDeleteEvent = async (id: string) => {
+    if (!confirm("Are you sure you want to delete this entry?")) return;
+    try {
+      await deleteDoc(doc(db, "events", id));
+      setEvents(events.filter((e) => e.id !== id));
+    } catch (err) {
+      console.error("Failed to delete entry:", err);
+    }
+  };
+
+  const formatHour = (hour: number) => {
+    const ampm = hour >= 12 ? "PM" : "AM";
+    const hour12 = hour % 12 === 0 ? 12 : hour % 12;
+    return `${hour12}:00 ${ampm}`;
   };
 
   return (
@@ -91,7 +123,7 @@ export default function WeeklyCalendar() {
       </div>
 
       {/* Calendar Grid */}
-      <div className="overflow-auto">
+      <div className="overflow-auto" ref={containerRef}>
         <div className="grid grid-cols-8 gap-px border border-gray-300 bg-gray-100">
           {/* Header row */}
           <div className="bg-white sticky top-0 z-10" />
@@ -111,15 +143,19 @@ export default function WeeklyCalendar() {
           {/* Time rows */}
           {hours.map((hour) => (
             <React.Fragment key={hour}>
-              <div className="bg-white text-right pr-2 text-sm py-6">{hour}:00</div>
+              <div
+                className="bg-white text-right pr-2 text-sm py-6"
+                data-hour={hour}
+              >
+                {formatHour(hour)}
+              </div>
               {weekDates.map((date) => {
                 const day = format(date, "EEEE");
                 const event = events.find(
                   (e) =>
-                    e.day === day &&
                     e.startHour === hour &&
-                    isSameDay(date, new Date(currentDate))
-                );
+                    format(date, "yyyy-MM-dd") === e.day // match by exact date
+                );                          
                 return (
                   <div
                     key={`${day}-${hour}`}
@@ -128,13 +164,21 @@ export default function WeeklyCalendar() {
                         ? "bg-yellow-50"
                         : "bg-white"
                     }`}
-                    onClick={() => handleCreateEvent(day, hour)}
+                    onClick={() => handleCreateEvent(format(date, "yyyy-MM-dd"), hour)}
                   >
                     {event && (
-                      <div
-                        className={`absolute inset-0 px-2 py-1 text-sm font-medium text-black ${event.color}`}
-                      >
-                        {event.title}
+                      <div className={`absolute inset-0 p-2 text-sm text-black ${event.color}`}>
+                        <div className="font-semibold">{event.title || "Untitled Entry"}</div>
+                        <div className="text-xs italic text-gray-500">"Dive deeper" placeholder</div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteEvent(event.id);
+                          }}
+                          className="text-red-500 text-xs underline mt-1"
+                        >
+                          Delete
+                        </button>
                       </div>
                     )}
                   </div>

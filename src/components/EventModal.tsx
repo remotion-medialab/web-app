@@ -1,61 +1,65 @@
-// src/components/EventModal.tsx
 import React, { useState } from "react";
 
-type Props = {
+interface EventModalProps {
   day: string;
   hour: number;
   onClose: () => void;
-  onSave: (event: {
-    title: string;
-    day: string;
-    startHour: number;
-    endHour: number;
-    color: string;
-  }) => void;
-};
+  onSave: (event: { title: string; entry: string; day: string; startHour: number; endHour: number; color: string }) => void;
+}
 
-export default function EventModal({ day, hour, onClose, onSave }: Props) {
+export default function EventModal({ day, hour, onClose, onSave }: EventModalProps) {
   const [title, setTitle] = useState("");
+  const [entry, setEntry] = useState("");
+  const [color, setColor] = useState("bg-green-300");
 
-  const handleSubmit = () => {
-    if (!title.trim()) return;
+  const handleSave = () => {
+    if (!entry.trim()) {
+      alert("Entry cannot be empty.");
+      return;
+    }
     onSave({
       title,
+      entry,
       day,
       startHour: hour,
       endHour: hour + 1,
-      color: "bg-green-300",
+      color,
     });
-    onClose();
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center z-50">
-      <div className="bg-white p-6 rounded-lg shadow-md w-80">
-        <h2 className="text-lg font-semibold mb-2">New Reflection</h2>
-        <p className="text-sm mb-4">
-          {day} at {hour}:00
-        </p>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+      <div className="bg-white p-4 rounded w-full max-w-md">
+        <h2 className="text-lg font-semibold mb-2">New Journal Entry</h2>
         <input
-          type="text"
-          className="w-full border border-gray-300 rounded px-3 py-2 mb-4"
-          placeholder="e.g. Called mom, Bad meeting..."
+          className="w-full border mb-2 px-2 py-1"
+          placeholder="Optional title (e.g. Workplace Fiasco)"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
         />
-        <div className="flex justify-end space-x-2">
-          <button
-            onClick={onClose}
-            className="px-3 py-1 text-sm text-gray-600 hover:underline"
+        <textarea
+          className="w-full border mb-2 px-2 py-1 h-24"
+          placeholder="Write your journal entry..."
+          value={entry}
+          onChange={(e) => setEntry(e.target.value)}
+        />
+        <div className="mb-2">
+          <label className="block text-sm">Label Color:</label>
+          <select
+            className="w-full border px-2 py-1"
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
           >
-            Cancel
-          </button>
-          <button
-            onClick={handleSubmit}
-            className="px-3 py-1 bg-indigo-600 text-white text-sm rounded hover:bg-indigo-700"
-          >
-            Save
-          </button>
+            <option value="bg-green-300">Green</option>
+            <option value="bg-blue-300">Blue</option>
+            <option value="bg-yellow-300">Yellow</option>
+            <option value="bg-red-300">Red</option>
+            <option value="bg-purple-300">Purple</option>
+          </select>
+        </div>
+        <div className="flex justify-end gap-2">
+          <button className="bg-gray-200 px-3 py-1" onClick={onClose}>Cancel</button>
+          <button className="bg-blue-500 text-white px-3 py-1" onClick={handleSave}>Save</button>
         </div>
       </div>
     </div>
