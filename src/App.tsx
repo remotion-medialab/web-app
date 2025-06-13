@@ -1,17 +1,42 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-
+// src/App.tsx
+import { useEffect, useState } from "react";
+import { onAuthStateChanged, signOut } from "firebase/auth";
+import { auth } from "./lib/firebase";
+import Auth from "./components/Auth";
 import WeeklyCalendar from "./components/WeeklyCalendar";
 
-function App() {
+export default function App() {
+  const [user, setUser] = useState(() => auth.currentUser);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setUser(user);
+      setLoading(false);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  if (loading) return <div className="p-4">Loading...</div>;
+  if (!user) return <Auth onAuth={() => setUser(auth.currentUser)} />;
+
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
-      <h1 className="text-2xl font-bold mb-4">SIMTREE: Weekly Reflection</h1>
+    <div className="p-4">
+      <div className="flex justify-between items-center mb-4">
+        <div className="text-sm">
+          Logged in as <strong>{user.displayName || user.email}</strong>
+        </div>
+        <button
+          onClick={async () => {
+            await signOut(auth);
+            setUser(null);
+          }}
+          className="text-sm bg-red-500 text-white px-3 py-1 rounded"
+        >
+          Log Out
+        </button>
+      </div>
       <WeeklyCalendar />
     </div>
   );
 }
-
-export default App;

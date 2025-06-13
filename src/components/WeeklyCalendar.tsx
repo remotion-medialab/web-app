@@ -1,16 +1,20 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { addDays, startOfWeek, format, isSameDay } from "date-fns";
 import EventModal from "./EventModal";
+import { db, auth } from "../lib/firebase";
+import { collection, getDocs, addDoc } from "firebase/firestore";
+import { signOut } from "firebase/auth";
 
 const hours = Array.from({ length: 12 }, (_, i) => i + 7); // 7 AM to 6 PM
 
 type EventType = {
-  id: number;
+  id: string;
   title: string;
   day: string;
   startHour: number;
   endHour: number;
   color: string;
+  uid: string;
 };
 
 export default function WeeklyCalendar() {
@@ -18,6 +22,25 @@ export default function WeeklyCalendar() {
   const [events, setEvents] = useState<EventType[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [newEventSlot, setNewEventSlot] = useState<{ day: string; hour: number } | null>(null);
+
+  const user = auth.currentUser;
+
+  // Load events for current user
+  useEffect(() => {
+    const fetchEvents = async () => {
+      const uid = auth.currentUser?.uid;
+      if (!uid) return;
+
+      const snapshot = await getDocs(collection(db, "events"));
+      const loaded = snapshot.docs
+        .map(doc => ({ id: doc.id, ...doc.data() }))
+        .filter((doc: any) => doc.uid === uid) as EventType[];
+
+      setEvents(loaded);
+    };
+
+    fetchEvents();
+  }, []);
 
   const weekDates = Array.from({ length: 7 }).map((_, i) =>
     addDays(startOfWeek(currentDate, { weekStartsOn: 0 }), i)
@@ -28,9 +51,17 @@ export default function WeeklyCalendar() {
     setModalOpen(true);
   };
 
-  const handleSaveEvent = (event: Omit<EventType, "id">) => {
-    setEvents([...events, { ...event, id: Date.now() }]);
-    setModalOpen(false);
+  const handleSaveEvent = async (event: Omit<EventType, "id" | "uid">) => {
+    try {
+      const uid = auth.currentUser?.uid;
+      if (!uid) throw new Error("Not logged in");
+
+      const docRef = await addDoc(collection(db, "events"), { ...event, uid });
+      setEvents([...events, { ...event, id: docRef.id, uid }]);
+      setModalOpen(false);
+    } catch (err) {
+      console.error("Error adding event:", err);
+    }
   };
 
   return (
@@ -74,7 +105,7 @@ export default function WeeklyCalendar() {
               }`}
             >
               {format(date, "EEE d")}
-          </div>          
+            </div>
           ))}
 
           {/* Time rows */}
@@ -82,7 +113,7 @@ export default function WeeklyCalendar() {
             <React.Fragment key={hour}>
               <div className="bg-white text-right pr-2 text-sm py-6">{hour}:00</div>
               {weekDates.map((date) => {
-                const day = format(date, "EEEE"); // Full day name
+                const day = format(date, "EEEE");
                 const event = events.find(
                   (e) =>
                     e.day === day &&
@@ -93,7 +124,9 @@ export default function WeeklyCalendar() {
                   <div
                     key={`${day}-${hour}`}
                     className={`relative h-16 border-t border-gray-200 hover:bg-blue-50 cursor-pointer ${
-                      format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd") ? "bg-yellow-50" : "bg-white"
+                      format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd")
+                        ? "bg-yellow-50"
+                        : "bg-white"
                     }`}
                     onClick={() => handleCreateEvent(day, hour)}
                   >
