@@ -23,7 +23,6 @@ export default function WeeklyCalendar() {
   const containerRef = useRef<HTMLDivElement>(null);
   const navigate = useNavigate();
 
-  // Scroll to current hour on mount
   useEffect(() => {
     setTimeout(() => {
       const nowHour = new Date().getHours();
@@ -70,88 +69,100 @@ export default function WeeklyCalendar() {
   const formatHour = (hour: number) => {
     const ampm = hour >= 12 ? "PM" : "AM";
     const hour12 = hour % 12 === 0 ? 12 : hour % 12;
-    return `${hour12}:00 ${ampm}`;
+    return `${hour12} ${ampm}`;
   };
 
+  const now = new Date();
+  const currentHour = now.getHours();
+  const currentMinute = now.getMinutes();
+  const minuteOffset = (currentMinute / 60) * 100;
+
   return (
-    <div className="p-4">
-      {/* Navigation */}
-      <div className="flex justify-between items-center mb-4">
-        <button
-          onClick={() => setCurrentDate(new Date())}
-          className="px-3 py-1 text-sm bg-gray-200 rounded hover:bg-gray-300"
-        >
-          Today
-        </button>
-        <div className="space-x-2">
-          <button
-            onClick={() => setCurrentDate((prev) => addDays(prev, -7))}
-            className="px-3 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200"
-          >
-            ← Prev
-          </button>
-          <button
-            onClick={() => setCurrentDate((prev) => addDays(prev, 7))}
-            className="px-3 py-1 text-sm bg-gray-100 rounded hover:bg-gray-200"
-          >
-            Next →
-          </button>
+    <div className="font-sans">
+      {/* Sticky Header */}
+      <div className="sticky top-0 bg-white z-20">
+        <div className="flex justify-between items-center px-6 pt-6 pb-2">
+          <div className="text-xl font-semibold text-gray-800 tracking-wide w-1/4" />
+          <div className="text-center text-lg font-semibold text-gray-800 w-1/2">
+            {format(currentDate, "MMMM yyyy").toUpperCase()}
+          </div>
+          <div className="w-1/4 flex justify-end gap-4 text-gray-500 text-lg">
+            <button onClick={() => setCurrentDate((prev) => addDays(prev, -7))}>{"<"}</button>
+            <button onClick={() => setCurrentDate(new Date())}>Today</button>
+            <button onClick={() => setCurrentDate((prev) => addDays(prev, 7))}>{">"}</button>
+          </div>
+        </div>
+
+        {/* Days Header Row */}
+        <div className="grid grid-cols-8 border-t border-b border-gray-200 px-6">
+          <div className="text-xs text-gray-500 text-right pr-2">GMT-04</div>
+          {weekDates.map((date) => {
+            const isToday = format(date, "yyyy-MM-dd") === format(now, "yyyy-MM-dd");
+            return (
+              <div
+                key={date.toISOString()}
+                className={`text-center py-2 border-l border-gray-200 ${
+                  isToday ? "text-blue-600 font-bold bg-blue-50" : "text-gray-900"
+                }`}
+              >
+                <div className="text-sm">{format(date, "EEE")}</div>
+                <div className="text-lg font-bold">{format(date, "d")}</div>
+              </div>
+            );
+          })}
         </div>
       </div>
 
-      {/* Calendar Grid */}
+      {/* Scrollable Grid */}
       <div className="overflow-auto" ref={containerRef}>
-        <div className="grid grid-cols-8 gap-px border border-gray-300 bg-gray-100">
-          {/* Header row */}
-          <div className="bg-white sticky top-0 z-10" />
-          {weekDates.map((date) => (
-            <div
-              key={date.toISOString()}
-              className={`text-center font-semibold py-2 sticky top-0 z-10 ${
-                format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd")
-                  ? "bg-yellow-100 text-indigo-700"
-                  : "bg-white"
-              }`}
-            >
-              {format(date, "EEE d")}
-            </div>
-          ))}
-
-          {/* Time rows */}
+        <div className="grid grid-cols-8 px-6">
           {hours.map((hour) => (
             <React.Fragment key={hour}>
+              {/* Time label */}
               <div
-                className="bg-white text-right pr-2 text-sm py-6"
+                className="text-xs text-gray-500 text-right pr-2 pt-1 border-t border-gray-200"
                 data-hour={hour}
               >
                 {formatHour(hour)}
               </div>
-              {weekDates.map((date) => {
+              {weekDates.map((date, i) => {
+                const isCurrentDay = format(date, "yyyy-MM-dd") === format(now, "yyyy-MM-dd");
+                const showNowLine = isCurrentDay && hour === currentHour;
                 const event = events.find(
                   (e) =>
                     e.startHour === hour &&
                     format(date, "yyyy-MM-dd") === e.day
                 );
+
                 return (
                   <div
                     key={`${date}-${hour}`}
-                    className={`relative h-16 border-t border-gray-200 hover:bg-blue-50 cursor-pointer ${
-                      format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd")
-                        ? "bg-yellow-50"
-                        : "bg-white"
+                    className={`relative h-10 border-t border-l border-gray-200 hover:bg-blue-50 cursor-pointer ${
+                      isCurrentDay ? "bg-blue-50" : "bg-white"
                     }`}
                     onClick={() => handleCreateEvent(format(date, "yyyy-MM-dd"), hour)}
                   >
+                    {/* Time dot and line */}
+                    {showNowLine && (
+                      <div
+                        className="absolute left-0 w-full z-10"
+                        style={{ top: `${minuteOffset}%` }}
+                      >
+                        <div className="h-0.5 bg-blue-500 w-full" />
+                        <div className="w-2 h-2 bg-blue-500 rounded-full absolute -top-1 left-0" />
+                      </div>
+                    )}
+
+                    {/* Event */}
                     {event && (
-                      <div className={`absolute inset-0 p-2 text-sm text-black ${event.color}`}>
-                        <div className="font-semibold">{event.title || "Untitled Entry"}</div>
-                        <div className="text-xs italic text-gray-500">"Dive deeper" placeholder</div>
+                      <div className="absolute inset-0 flex items-center justify-start px-2 text-sm text-blue-600 bg-blue-100 rounded-full mx-2 my-1">
+                        {event.title || "Untitled Entry"}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
                             handleDeleteEvent(event.id);
                           }}
-                          className="text-red-500 text-xs underline mt-1"
+                          className="ml-2 text-xs text-red-500 underline"
                         >
                           Delete
                         </button>

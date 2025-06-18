@@ -32,7 +32,7 @@ export default function App() {
       <div className="p-4">
         <div className="flex justify-between items-center mb-4">
           <div className="text-sm">
-            Logged in as <strong>{user.displayName || user.email}</strong>
+            Welcome back {user.displayName}!
           </div>
           <button
             onClick={async () => {

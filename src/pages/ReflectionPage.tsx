@@ -4,7 +4,7 @@ import { useState } from "react";
 export default function ReflectionPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { timestamp } = location.state || { timestamp: "Recording 05.06.25" };
+  const { timestamp } = { timestamp: "Recording [Time]" };
   const [showHelp, setShowHelp] = useState(false);
 
   const steps = [
