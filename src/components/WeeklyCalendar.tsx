@@ -1,8 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
-import { addDays, startOfWeek, format, isSameDay, setHours } from "date-fns";
-import EventModal from "./EventModal";
+import { addDays, startOfWeek, format } from "date-fns";
 import { db, auth } from "../lib/firebase";
-import { collection, getDocs, addDoc, deleteDoc, doc } from "firebase/firestore";
+import { collection, getDocs, deleteDoc, doc } from "firebase/firestore";
+import { useNavigate } from "react-router-dom";
 
 const hours = Array.from({ length: 24 }, (_, i) => i); // 0 to 23
 
@@ -20,9 +20,8 @@ type EventType = {
 export default function WeeklyCalendar() {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [events, setEvents] = useState<EventType[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
-  const [newEventSlot, setNewEventSlot] = useState<{ day: string; hour: number } | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate();
 
   // Scroll to current hour on mount
   useEffect(() => {
@@ -54,31 +53,9 @@ export default function WeeklyCalendar() {
   );
 
   const handleCreateEvent = (day: string, hour: number) => {
-    setNewEventSlot({ day, hour });
-    setModalOpen(true);
+    const timestamp = `Recording ${format(new Date(day), "dd.MM.yy")}`;
+    navigate("/reflection", { state: { timestamp } });
   };
-
-  const handleSaveEvent = async (event: Omit<EventType, "id" | "uid">) => {
-    try {
-      const uid = auth.currentUser?.uid;
-      if (!uid) throw new Error("Not logged in");
-  
-      // Convert day to full yyyy-MM-dd format
-      const formattedDay = weekDates.find(d => format(d, "yyyy-MM-dd") === event.day);
-      if (!formattedDay) throw new Error("Invalid day");
-      
-      const eventWithFormattedDay = {
-        ...event,
-        day: format(formattedDay, "yyyy-MM-dd")
-      };
-  
-      const docRef = await addDoc(collection(db, "events"), { ...eventWithFormattedDay, uid });
-      setEvents([...events, { ...eventWithFormattedDay, id: docRef.id, uid }]);
-      setModalOpen(false);
-    } catch (err) {
-      console.error("Error adding event:", err);
-    }
-  };  
 
   const handleDeleteEvent = async (id: string) => {
     if (!confirm("Are you sure you want to delete this entry?")) return;
@@ -150,15 +127,14 @@ export default function WeeklyCalendar() {
                 {formatHour(hour)}
               </div>
               {weekDates.map((date) => {
-                const day = format(date, "EEEE");
                 const event = events.find(
                   (e) =>
                     e.startHour === hour &&
-                    format(date, "yyyy-MM-dd") === e.day // match by exact date
-                );                          
+                    format(date, "yyyy-MM-dd") === e.day
+                );
                 return (
                   <div
-                    key={`${day}-${hour}`}
+                    key={`${date}-${hour}`}
                     className={`relative h-16 border-t border-gray-200 hover:bg-blue-50 cursor-pointer ${
                       format(date, "yyyy-MM-dd") === format(new Date(), "yyyy-MM-dd")
                         ? "bg-yellow-50"
@@ -188,16 +164,6 @@ export default function WeeklyCalendar() {
           ))}
         </div>
       </div>
-
-      {/* Modal */}
-      {modalOpen && newEventSlot && (
-        <EventModal
-          day={newEventSlot.day}
-          hour={newEventSlot.hour}
-          onClose={() => setModalOpen(false)}
-          onSave={handleSaveEvent}
-        />
-      )}
     </div>
   );
 }

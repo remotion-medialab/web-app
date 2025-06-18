@@ -2,8 +2,15 @@
 import { useEffect, useState } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import { auth } from "./lib/firebase";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useNavigate,
+} from "react-router-dom";
 import Auth from "./components/Auth";
 import WeeklyCalendar from "./components/WeeklyCalendar";
+import ReflectionPage from "./pages/ReflectionPage";
 
 export default function App() {
   const [user, setUser] = useState(() => auth.currentUser);
@@ -21,22 +28,27 @@ export default function App() {
   if (!user) return <Auth onAuth={() => setUser(auth.currentUser)} />;
 
   return (
-    <div className="p-4">
-      <div className="flex justify-between items-center mb-4">
-        <div className="text-sm">
-          Logged in as <strong>{user.displayName || user.email}</strong>
+    <Router>
+      <div className="p-4">
+        <div className="flex justify-between items-center mb-4">
+          <div className="text-sm">
+            Logged in as <strong>{user.displayName || user.email}</strong>
+          </div>
+          <button
+            onClick={async () => {
+              await signOut(auth);
+              setUser(null);
+            }}
+            className="text-sm bg-red-500 text-white px-3 py-1 rounded"
+          >
+            Log Out
+          </button>
         </div>
-        <button
-          onClick={async () => {
-            await signOut(auth);
-            setUser(null);
-          }}
-          className="text-sm bg-red-500 text-white px-3 py-1 rounded"
-        >
-          Log Out
-        </button>
+        <Routes>
+          <Route path="/" element={<WeeklyCalendar />} />
+          <Route path="/reflection" element={<ReflectionPage />} />
+        </Routes>
       </div>
-      <WeeklyCalendar />
-    </div>
+    </Router>
   );
 }
