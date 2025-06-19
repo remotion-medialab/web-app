@@ -1,32 +1,23 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect, useState, useRef } from "react";
-import { doc, updateDoc } from "firebase/firestore";
-import { ref, uploadBytes, getDownloadURL } from "firebase/storage";
-import { db, storage } from "../lib/firebase";
 
 export default function RecordingPage() {
   const location = useLocation();
   const navigate = useNavigate();
+  const { title } = location.state || {};
 
-  const { id, title, day, startHour } = location.state || {};
   const [savedTitle, setSavedTitle] = useState(title || "");
-  const [status, setStatus] = useState("Idle");
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [status, setStatus] = useState("Click 'Record' to start");
   const [audioURL, setAudioURL] = useState<string | null>(null);
-  const audioChunks = useRef<Blob[]>([]);
   const [recording, setRecording] = useState(false);
-
-  useEffect(() => {
-    if (!id || !day || startHour === undefined) {
-      console.warn("Missing navigation state");
-    }
-  }, [id, day, startHour]);
+  const mediaRecorder = useRef<MediaRecorder | null>(null);
+  const audioChunks = useRef<Blob[]>([]);
 
   const handleStart = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const recorder = new MediaRecorder(stream);
-      setMediaRecorder(recorder);
+      mediaRecorder.current = recorder;
       audioChunks.current = [];
 
       recorder.ondataavailable = (event) => {
@@ -40,43 +31,25 @@ export default function RecordingPage() {
       };
 
       recorder.start();
-      setStatus("Recording...");
       setRecording(true);
+      setStatus("Recording...");
     } catch (err) {
-      console.error("Error accessing microphone:", err);
-      alert("Microphone permission denied or not supported.");
+      console.error("Microphone error:", err);
+      alert("Microphone permission denied or not available.");
     }
   };
 
   const handleStop = () => {
-    mediaRecorder?.stop();
-    setStatus("Stopped");
+    mediaRecorder.current?.stop();
     setRecording(false);
+    setStatus("Stopped");
   };
 
-  const handleSave = async () => {
-    if (!id || !audioURL) return;
-  
-    try {
-      const audioBlob = new Blob(audioChunks.current, { type: "audio/webm" });
-      const storageRef = ref(storage, `recordings/${id}.webm`);
-      await uploadBytes(storageRef, audioBlob);
-      const downloadURL = await getDownloadURL(storageRef);
-  
-      await updateDoc(doc(db, "events", id), {
-        title: savedTitle,
-        entry: "Voice journal recorded.",
-        audioUrl: downloadURL,
-      });
-      console.log("Navigating to reflection with jid:", id);
-      navigate("/reflection", {
-        state: { jid: id },  
-      });
-    } catch (err) {
-      console.error("Error saving entry:", err);
-    }
+  const handleSave = () => {
+    navigate("/reflection", {
+      state: { timestamp: savedTitle || "(Untitled Recording)" },
+    });
   };
-  
 
   return (
     <div className="p-8 max-w-xl mx-auto text-center">
@@ -117,11 +90,8 @@ export default function RecordingPage() {
       )}
 
       <button
-        className={`px-5 py-2 text-white rounded ${
-          audioURL ? "bg-green-600" : "bg-gray-400 cursor-not-allowed"
-        }`}
+        className="px-5 py-2 bg-green-600 text-white rounded"
         onClick={handleSave}
-        disabled={!audioURL}
       >
         Save Entry
       </button>
