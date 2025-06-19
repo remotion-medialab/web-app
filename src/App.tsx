@@ -11,6 +11,7 @@ import Auth from "./components/Auth";
 import WeeklyCalendar from "./components/WeeklyCalendar";
 import ReflectionPage from "./pages/ReflectionPage";
 import RecordingPage from "./pages/RecordingPage"; 
+import CreatePathPage from "./pages/CreatePathPage";
 
 export default function App() {
   const [user, setUser] = useState(() => auth.currentUser);
@@ -46,8 +47,9 @@ export default function App() {
         </div>
         <Routes>
           <Route path="/" element={<WeeklyCalendar />} />
-          <Route path="/record" element={<RecordingPage />} /> {/* NEW */}
+          <Route path="/record" element={<RecordingPage />} />
           <Route path="/reflection" element={<ReflectionPage />} />
+          <Route path="/create-path" element={<CreatePathPage />} />
         </Routes>
       </div>
     </Router>
