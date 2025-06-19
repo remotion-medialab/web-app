@@ -6,11 +6,11 @@ import {
   BrowserRouter as Router,
   Routes,
   Route,
-  useNavigate,
 } from "react-router-dom";
 import Auth from "./components/Auth";
 import WeeklyCalendar from "./components/WeeklyCalendar";
 import ReflectionPage from "./pages/ReflectionPage";
+import RecordingPage from "./pages/RecordingPage"; 
 
 export default function App() {
   const [user, setUser] = useState(() => auth.currentUser);
@@ -32,7 +32,7 @@ export default function App() {
       <div className="p-4">
         <div className="flex justify-between items-center mb-4">
           <div className="text-sm">
-            Welcome back {user.displayName}!
+            Welcome back {user.displayName || user.email}!
           </div>
           <button
             onClick={async () => {
@@ -46,6 +46,7 @@ export default function App() {
         </div>
         <Routes>
           <Route path="/" element={<WeeklyCalendar />} />
+          <Route path="/record" element={<RecordingPage />} /> {/* NEW */}
           <Route path="/reflection" element={<ReflectionPage />} />
         </Routes>
       </div>

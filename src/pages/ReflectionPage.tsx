@@ -1,10 +1,15 @@
 import { useLocation, useNavigate } from "react-router-dom";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { db } from "../lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 export default function ReflectionPage() {
   const location = useLocation();
   const navigate = useNavigate();
-  const { timestamp } = { timestamp: "Recording [Time]" };
+  const { jid } = location.state || {};
+  const [entry, setEntry] = useState("Loading...");
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [title, setTitle] = useState<string>("Untitled");
   const [showHelp, setShowHelp] = useState(false);
 
   const steps = [
@@ -15,23 +20,45 @@ export default function ReflectionPage() {
     { label: "MODULATION", desc: "Influencing the expression or experience of the emotion after it arises." },
   ];
 
+  useEffect(() => {
+    const fetch = async () => {
+      if (!jid) return;
+      const docSnap = await getDoc(doc(db, "events", jid));
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setEntry(data.entry || "(empty)");
+        if (data.audioUrl) setAudioUrl(data.audioUrl);
+        if (data.title) setTitle(data.title);
+      } else {
+        setEntry("Entry not found.");
+      }
+    };
+    fetch();
+  }, [jid]);
+
   return (
     <div className="flex flex-col lg:flex-row p-6 gap-8 relative">
-      {/* Dim background */}
       {showHelp && (
         <div className="absolute inset-0 bg-white bg-opacity-80 z-10 pointer-events-none" />
       )}
 
-      {/* Left Panel */}
       <div className={`lg:w-2/3 z-20 ${showHelp ? "opacity-30" : ""}`}>
         <h2 className="text-blue-600 font-semibold text-sm mb-2">
           Here's what you said yesterday evening after work.
         </h2>
-        <h1 className="text-2xl font-bold mb-4">{timestamp}</h1>
+        <h1 className="text-2xl font-bold mb-4">{title}</h1>
         <p className="whitespace-pre-wrap leading-relaxed text-gray-800">
-          Had another frustrating interaction with Sarah during lab meeting today...
+          {entry}
         </p>
-        <div className="mt-4 flex gap-3">
+
+        {audioUrl && (
+          <div className="mt-6">
+            <p className="text-sm text-gray-700 mb-1">Your voice journal:</p>
+            <audio controls src={audioUrl} className="w-full" />
+          </div>
+        )}
+
+        <div className="mt-6 flex gap-3">
           <button className="px-3 py-1 border rounded bg-blue-500 text-white">▶️</button>
           <button
             className="text-sm text-blue-600 underline"
@@ -42,10 +69,8 @@ export default function ReflectionPage() {
         </div>
       </div>
 
-      {/* Right Panel */}
       <div className="flex justify-center items-center w-full z-20 relative">
         <svg viewBox="0 0 1000 1000" className="w-full max-w-xl h-auto">
-          {/* Circles */}
           {[1, 2, 3, 4].map((i) => (
             <circle
               key={i}
@@ -58,7 +83,6 @@ export default function ReflectionPage() {
             />
           ))}
 
-          {/* Horizontal dots + line */}
           <line
             x1="500"
             y1="500"
@@ -82,7 +106,6 @@ export default function ReflectionPage() {
             />
           ))}
 
-          {/* Labels */}
           {steps.map((step, i) => (
             <text
               key={step.label}
@@ -90,17 +113,15 @@ export default function ReflectionPage() {
               y={500 - (i + 1) * 110 + 70}
               textAnchor="middle"
               fontSize="18"
-              fill="#c5d4fb"
+              fill={showHelp ? "#60a5fa" : "#c5d4fb"}
             >
               {step.label}
             </text>
           ))}
 
-          {/* Guide Arrows & Descriptions (vertical layout) */}
           {showHelp &&
             steps.map((step, i) => (
               <>
-                {/* Arrow from one label to the next upward ring */}
                 {i < steps.length - 1 && (
                   <line
                     key={`arrow-${i}`}
@@ -113,20 +134,6 @@ export default function ReflectionPage() {
                     markerEnd="url(#arrow-up)"
                   />
                 )}
-
-                {/* Label */}
-                <text
-                  key={step.label}
-                  x="500"
-                  y={500 - (i + 1) * 110 + 70}
-                  textAnchor="middle"
-                  fontSize="18"
-                  fill="#60a5fa"
-                >
-                  {step.label}
-                </text>
-
-                {/* Text */}
                 <text
                   key={`desc-${i}`}
                   x="600"
@@ -144,7 +151,6 @@ export default function ReflectionPage() {
               </>
             ))}
 
-          {/* Arrow marker definition */}
           {showHelp && (
             <defs>
               <marker
@@ -162,21 +168,13 @@ export default function ReflectionPage() {
         </svg>
       </div>
 
-      {/* Help icon in its own fixed position */}
       <div
         className="absolute top-4 right-4 z-30"
         onClick={() => setShowHelp((prev) => !prev)}
         style={{ cursor: "pointer" }}
       >
         <svg width="50" height="50">
-          <circle
-            cx="25"
-            cy="25"
-            r="15"
-            fill="white"
-            stroke="#60a5fa"
-            strokeWidth="1.5"
-          />
+          <circle cx="25" cy="25" r="15" fill="white" stroke="#60a5fa" strokeWidth="1.5" />
           <text
             x="25"
             y="28"
