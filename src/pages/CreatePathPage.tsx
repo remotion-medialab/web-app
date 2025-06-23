@@ -1,13 +1,18 @@
 import { useState, useRef } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function CreatePathPage() {
+  const navigate = useNavigate();
+
   const [zoom, setZoom] = useState(1);
   const [hoveredDot, setHoveredDot] = useState<{ ringIdx: number; dotIdx: number } | null>(null);
   const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
   const [selectedDots, setSelectedDots] = useState<(number | null)[]>([null, null, null, null]);
+  const [showSummary, setShowSummary] = useState(false);
+
   const wrapperRef = useRef<HTMLDivElement>(null);
 
-  const dotCounts = [16, 20, 24, 28];
+  const dotCounts = [16, 16, 16, 16];
 
   const getCoordinates = (ringIdx: number, dotIdx: number) => {
     const r = (ringIdx + 1) * 100;
@@ -32,6 +37,147 @@ export default function CreatePathPage() {
     setSelectedDots(newSelected);
     setHoveredDot(null);
   };
+
+  if (showSummary) {
+    const actualDots = [0, 0, 0, 0];
+  
+    return (
+      <div className="relative flex flex-col items-start justify-center min-h-screen bg-white text-blue-500 px-8">
+        <p className="self-start text-left text-blue-500 font-semibold text-sm mb-2">
+          Here is a summary of your actual vs new chosen path forward.
+        </p>
+        <div className="w-full flex justify-between items-center px-12 pt-10">
+          {/* ACTUAL PATH */}
+          <div className="w-1/2 flex flex-col items-center justify-center text-blue-500">
+            <svg viewBox="0 100 1000 1000" className="w-[600px] h-[680px]">
+              {[1, 2, 3, 4].map((i) => (
+                <circle key={i} cx={500} cy={500} r={i * 100} fill="none" stroke="currentColor" strokeWidth="1" />
+              ))}
+              {[0, 1, 2, 3].map((level) => {
+                const [x1, y1] = level === 0
+                  ? [500, 500]
+                  : getCoordinates(level - 1, actualDots[level - 1]);
+                const [x2, y2] = getCoordinates(level, actualDots[level]);
+                return (
+                  <line key={`actual-line-${level}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#60a5fa" strokeWidth={2} />
+                );
+              })}
+              {[0, 1, 2, 3].map((level) => {
+                const [cx, cy] = getCoordinates(level, actualDots[level]);
+                return (
+                  <circle
+                    key={`actual-dot-${level}`}
+                    cx={cx}
+                    cy={cy}
+                    r={20}
+                    fill="#c5d4fb"
+                    stroke="#60a5fa"
+                    strokeWidth={1.5}
+                  />
+                );
+              })}
+              <circle
+                cx={500}
+                cy={500}
+                r={20}
+                fill="#c5d4fb"
+                stroke="#60a5fa"
+                strokeWidth={1.5}
+              />
+
+              {["SITUATION", "MODIFICATION", "ATTENTION", "INTERPRETATION", "MODULATION"].map((label, i) => (
+              <text
+                key={label}
+                x={500}
+                y={500 - (i + 1) * 100 + 60}
+                textAnchor="middle"
+                className="text-sm"
+                fill="currentColor"
+              >
+                {label}
+              </text>
+            ))}
+            </svg>
+            <div className="relative w-full h-0">
+              <div className="absolute -top-28 left-1/2 transform -translate-x-1/2 text-sm font-semibold">
+                ACTUAL PATH
+              </div>
+            </div>
+          </div>
+  
+          {/* NEW PATH */}
+          <div className="w-1/2 flex flex-col items-center justify-center text-blue-500">
+            <svg viewBox="0 100 1000 1000" className="w-[600px] h-[680px]">
+              {[1, 2, 3, 4].map((i) => (
+                <circle key={i} cx={500} cy={500} r={i * 100} fill="none" stroke="currentColor" strokeWidth="1" />
+              ))}
+              {[0, 1, 2, 3].map((level) => {
+                if (selectedDots[level] === null) return null;
+                const [x1, y1] = level === 0
+                  ? [500, 500]
+                  : getCoordinates(level - 1, selectedDots[level - 1]!);
+                const [x2, y2] = getCoordinates(level, selectedDots[level]!);
+                return (
+                  <line key={`line-${level}`} x1={x1} y1={y1} x2={x2} y2={y2} stroke="#60a5fa" strokeWidth={2} />
+                );
+              })}
+              {dotCounts.map((count, ringIdx) =>
+                Array.from({ length: count }, (_, dotIdx) => {
+                  const [cx, cy] = getCoordinates(ringIdx, dotIdx);
+                  const isSelected = selectedDots[ringIdx] === dotIdx;
+                  return (
+                    <circle
+                      key={`dot-${ringIdx}-${dotIdx}`}
+                      cx={cx}
+                      cy={cy}
+                      r={isSelected ? 20 : 7}
+                      fill={isSelected ? "#c5d4fb" : "white"}
+                      stroke="#60a5fa"
+                      strokeWidth={1}
+                    />
+                  );
+                })
+              )}
+              <circle
+                cx={500}
+                cy={500}
+                r={20}
+                fill="#c5d4fb"
+                stroke="#60a5fa"
+                strokeWidth={1.5}
+              />
+
+            {["SITUATION", "MODIFICATION", "ATTENTION", "INTERPRETATION", "MODULATION"].map((label, i) => (
+              <text
+                key={label}
+                x={500}
+                y={500 - (i + 1) * 100 + 60}
+                textAnchor="middle"
+                className="text-sm"
+                fill="currentColor"
+              >
+                {label}
+              </text>
+            ))}
+            </svg>
+            <div className="relative w-full h-0">
+              <div className="absolute -top-28 left-1/2 transform -translate-x-1/2 text-sm font-semibold">
+                NEW PATH
+              </div>
+            </div>
+          </div>
+        </div>
+        <button
+          className="absolute bottom-20 right-8 text-sm px-4 py-2 rounded-full bg-blue-500 text-white"
+          onClick={() => {
+            // TODO
+          }}
+        >
+          Save path
+        </button>
+      </div>
+    );
+  }  
 
   return (
     <div className="relative flex flex-col items-start justify-center min-h-screen bg-white text-blue-500 px-8">
@@ -215,6 +361,11 @@ export default function CreatePathPage() {
             : "bg-gray-100 text-gray-400"
         }`}
         disabled={selectedDots[3] === null}
+        onClick={() => {
+          if (selectedDots[3] !== null) {
+            setShowSummary(true);
+          }
+        }}
       >
         {selectedDots[3] !== null ? "Add path" : "Save path"}
       </button>
