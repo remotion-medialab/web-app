@@ -10,7 +10,7 @@ import {
 import Auth from "./components/Auth";
 import WeeklyCalendar from "./components/WeeklyCalendar";
 import ReflectionPage from "./pages/ReflectionPage";
-import RecordingPage from "./pages/RecordingPage"; 
+import RecordingPage from "./pages/RecordingPage";
 import CreatePathPage from "./pages/CreatePathPage";
 
 export default function App() {
@@ -21,6 +21,11 @@ export default function App() {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
       setUser(user);
       setLoading(false);
+
+      // Always redirect to calendar on login
+      if (user && window.location.pathname !== "/") {
+        window.history.replaceState(null, "", "/");
+      }
     });
     return () => unsubscribe();
   }, []);
