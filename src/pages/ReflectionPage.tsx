@@ -20,9 +20,9 @@ export default function ReflectionPage() {
   const stageTextMap: Record<string, string> = {
     SITUATION: "You attended a lab meeting and gave PCR optimization presentation despite previous conflicts with Sarah.",
     MODIFICATION: "There were no apparent preparation for potential interruptions or conflict management strategies.",
-    ATTENTION: "You focused on Sarah’s interruptions and Dr. Chen’s lack of intervention, amplifying distress",
+    ATTENTION: "You focused on Sarah’s interruptions and Dr. Chen’s lack of intervention, amplifying distress.",
     INTERPRETATION: "You interpreted Sarah’s comments as personal attacks rather than exploring alternative meanings or intentions.",
-    MODULATION: "You stuttered through presentation, withdrew immediately after, avoided colleagues for remainder of day",
+    MODULATION: "You stuttered through presentation, withdrew immediately after, avoided colleagues for remainder of day.",
   };
 
   const highlightClass = (label: string) =>

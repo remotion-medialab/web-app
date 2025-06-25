@@ -22,10 +22,10 @@ export default function App() {
       setUser(user);
       setLoading(false);
 
-      // Always redirect to calendar on login
-      if (user && window.location.pathname !== "/") {
-        window.history.replaceState(null, "", "/");
-      }
+      // // Always redirect to calendar on login
+      // if (user && window.location.pathname !== "/") {
+      //   window.history.replaceState(null, "", "/");
+      // }
     });
     return () => unsubscribe();
   }, []);

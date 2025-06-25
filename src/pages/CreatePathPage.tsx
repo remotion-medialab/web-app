@@ -40,6 +40,13 @@ export default function CreatePathPage() {
 
   if (showSummary) {
     const actualDots = [0, 0, 0, 0];
+    const actualTexts = [
+      "You attended a lab meeting and gave PCR optimization presentation despite previous conflicts with Sarah.",
+      "There were no apparent preparation for potential interruptions or conflict management strategies.",
+      "You focused on Sarah’s interruptions and Dr. Chen’s lack of intervention, amplifying distress.",
+      "You interpreted Sarah’s comments as personal attacks rather than exploring alternative meanings or intentions.",
+      "You stuttered through presentation, withdrew immediately after, avoided colleagues for remainder of day.",
+    ];  
   
     return (
       <div className="relative flex flex-col items-start justify-center min-h-screen bg-white text-blue-500 px-8">

@@ -17,20 +17,22 @@ export default function Auth({ onAuth }: { onAuth: () => void }) {
     try {
       const userCred = await createUserWithEmailAndPassword(auth, email, password);
       await updateProfile(userCred.user, { displayName: username });
+      window.location.href = "/"; // force redirect to calendar
       onAuth();
     } catch (err) {
       alert("Signup failed: " + (err as Error).message);
     }
   };
-
+  
   const handleSignIn = async () => {
     try {
       await signInWithEmailAndPassword(auth, email, password);
+      window.location.href = "/"; // force redirect to calendar
       onAuth();
     } catch (err) {
       alert("Login failed: " + (err as Error).message);
     }
-  };
+  };  
 
   return (
     <div className="p-4 max-w-sm mx-auto space-y-3">
