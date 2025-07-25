@@ -2,17 +2,20 @@
 import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
+import { getFunctions } from "firebase/functions";
 
-
+// Updated to use the same Firebase project as your mobile app
 const firebaseConfig = {
-    apiKey: "AIzaSyCn696SYox_sOCBxLueFJVu8PJctVCTteM",
-    authDomain: "simtree-7cffa.firebaseapp.com",
-    projectId: "simtree-7cffa",
-    messagingSenderId: "198862630444",
-    appId: "1:198862630444:web:820f74025ced00d6812b89",
-    measurementId: "G-QJWVDSPM2M"
-  };  
+  apiKey: "AIzaSyDJUOXGl3kX0_bJu7ebjTRhPhyhK3BIlYA",
+  authDomain: "reself-noregrets.firebaseapp.com",
+  projectId: "reself-noregrets",
+  storageBucket: "reself-noregrets.firebasestorage.app",
+  messagingSenderId: "1035227524394",
+  appId: "1:1035227524394:web:e23ca4fc11d052d1e74253",
+  measurementId: "G-EH1MSLTF3N"
+};
 
 const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+export const db = getFirestore(app, 'mobapp'); // Connect to the mobapp database
 export const auth = getAuth(app);
+export const functions = getFunctions(app);

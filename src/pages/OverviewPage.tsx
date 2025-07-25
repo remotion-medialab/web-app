@@ -1,7 +1,15 @@
 // src/pages/OverviewPage.tsx
 
-import React, { useState } from "react";
-import { addDays, startOfWeek, format } from "date-fns";
+import React, { useState, useEffect } from "react";
+import { addDays, startOfWeek, format, isSameDay } from "date-fns";
+import { useAuth } from "../contexts/AuthContext";
+import { useRecordings } from "../hooks/useRecordings";
+import type { RecordingSession } from "../lib/recordingsService";
+import SessionDetailView from "../components/SessionDetailView";
+import MentalModelViewer from "../components/MentalModelViewer";
+import type { Recording } from "../lib/recordingsService";
+import { WeeklyPlanService } from "../lib/weeklyPlanService";
+import type { WeeklyPlan, WeeklyPlanFormData } from "../types/weeklyPlan";
 
 // day of week headers
 const dayHeaders = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -15,28 +23,129 @@ const prompts = [
   'Write down as many "If-Then" behavior plans (i.e. “If situation X arises, then I will do Y.”)',
 ];
 
-// sample log data: day -> array of timestamps
-const logData: Record<number, string[]> = {
-  29: ["9:12 AM", "1:46 AM", "5:57 AM"],
-  30: ["10:25 AM", "2:03 PM", "5:42 PM"],
-  1: ["9:58 AM", "12:44 PM", "4:51 PM"],
-  2: ["8:33 AM", "11:47 AM", "5:28 PM"],
-  3: ["10:04 AM", "1:55 PM", "5:41 PM"],
-  4: ["7:46 AM", "12:01 PM", "3:39 PM"],
-  5: ["9:28 AM", "1:12 PM", "5:44 PM"],
-  6: ["10:13 PM", "12:57 PM", "4:32 PM"],
-  7: ["9:09 AM", "2:11 PM", "5:37 PM"],
-  8: ["10:46 AM", "12:40 PM", "4:59 PM"],
-  9: ["11:08 AM", "3:14 PM", "5:35 PM"],
-};
-
 const OverviewPage: React.FC = () => {
-  const [showPlan, setShowPlan] = useState(false);   // whether right-side panel is shown
+  const [showPlan, setShowPlan] = useState(false); // whether right-side panel is shown
   const [planCreated, setPlanCreated] = useState(false); // if plan was saved
-  const [weekOffset, setWeekOffset] = useState(0);   // current week offset (for arrows)
+  const [weekOffset, setWeekOffset] = useState(0); // current week offset (for arrows)
+  const [selectedSession, setSelectedSession] =
+    useState<RecordingSession | null>(null);
+  const [selectedRecording, setSelectedRecording] = useState<Recording | null>(
+    null
+  );
+  const [currentWeekPlan, setCurrentWeekPlan] = useState<WeeklyPlan | null>(
+    null
+  );
+  const [formData, setFormData] = useState<WeeklyPlanFormData>({
+    idealWeek: "",
+    obstacles: "",
+    preventActions: "",
+    actionDetails: "",
+    ifThenPlans: "",
+  });
+  const [isSaving, setIsSaving] = useState(false);
+
+  // Auth and recordings data
+  const { userId, signInAsTestUser, loading: authLoading } = useAuth();
+  const {
+    sessions,
+    sessionsByDay,
+    loading: recordingsLoading,
+    error,
+    refetch,
+    stats,
+  } = useRecordings(userId);
+
+  const getSessionsForDate = (date: Date): RecordingSession[] => {
+    const dateKey = date.toISOString().split("T")[0];
+    return sessionsByDay[dateKey] || [];
+  };
 
   const handlePlanButton = () => setShowPlan(!showPlan);
-  const handleSave = () => setPlanCreated(true);
+
+  const handleSave = async () => {
+    if (!userId) return;
+
+    setIsSaving(true);
+    try {
+      const currentWeekDate = addDays(today, weekOffset * 7);
+      const savedPlan = await WeeklyPlanService.saveWeeklyPlan(
+        userId,
+        formData,
+        currentWeekDate
+      );
+
+      // Associate current week's sessions with the plan
+      const currentWeekSessions = getCurrentWeekSessions();
+      const sessionIds = currentWeekSessions.map((s) => s.sessionId);
+      if (sessionIds.length > 0) {
+        await WeeklyPlanService.associateSessionsWithPlan(
+          userId,
+          sessionIds,
+          currentWeekDate
+        );
+      }
+
+      setCurrentWeekPlan(savedPlan);
+      setPlanCreated(true);
+      alert("Weekly behavior plan saved successfully!");
+    } catch (error) {
+      console.error("Error saving weekly plan:", error);
+      alert("Failed to save weekly plan. Please try again.");
+    } finally {
+      setIsSaving(false);
+    }
+  };
+
+  const handleFormChange = (field: keyof WeeklyPlanFormData, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const getCurrentWeekSessions = (): RecordingSession[] => {
+    const currentWeekDates = weekDates;
+    const allSessionsThisWeek: RecordingSession[] = [];
+
+    currentWeekDates.forEach((date) => {
+      const sessionsForDate = getSessionsForDate(date);
+      allSessionsThisWeek.push(...sessionsForDate);
+    });
+
+    return allSessionsThisWeek;
+  };
+
+  // Load current week plan on component mount and when week changes
+  useEffect(() => {
+    const loadCurrentWeekPlan = async () => {
+      if (!userId) return;
+
+      try {
+        const currentWeekDate = addDays(today, weekOffset * 7);
+        const plan = await WeeklyPlanService.getWeeklyPlan(
+          userId,
+          currentWeekDate
+        );
+
+        if (plan) {
+          setCurrentWeekPlan(plan);
+          setPlanCreated(true);
+          setFormData(plan.responses);
+        } else {
+          setCurrentWeekPlan(null);
+          setPlanCreated(false);
+          setFormData({
+            idealWeek: "",
+            obstacles: "",
+            preventActions: "",
+            actionDetails: "",
+            ifThenPlans: "",
+          });
+        }
+      } catch (error) {
+        console.error("Error loading weekly plan:", error);
+      }
+    };
+
+    loadCurrentWeekPlan();
+  }, [userId, weekOffset]);
 
   const today = new Date();
   const weekStart = addDays(startOfWeek(addDays(today, weekOffset * 7)), 0);
@@ -48,25 +157,72 @@ const OverviewPage: React.FC = () => {
     "MMM d, yyyy"
   )}`;
 
+  // Show loading or authentication
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
+          <p className="text-gray-600">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       {/* Main white card container */}
       <div
         className={`h-full w-full bg-white border rounded-lg p-6 flex ${
-          showPlan ? "flex-row gap-4" : "flex-col"
+          showPlan || selectedSession || selectedRecording
+            ? "flex-row gap-4"
+            : "flex-col"
         }`}
       >
         {/* LEFT panel: calendar */}
-        <div className={`${showPlan ? "w-1/2" : "w-full"} flex flex-col`}>
-          
+        <div
+          className={`${
+            selectedRecording
+              ? "w-1/3"
+              : showPlan || selectedSession
+              ? "w-1/2"
+              : "w-full"
+          } flex flex-col`}
+        >
           {/* header + date range + arrows */}
           <div className="flex justify-between items-center">
             <div>
-              <h1 className="text-xl font-semibold" style={{ color: "#545454" }}>
-                Voice Log Overview
-              </h1>
+              <div className="flex items-center gap-3">
+                <h1
+                  className="text-xl font-semibold"
+                  style={{ color: "#545454" }}
+                >
+                  Voice Log Overview
+                </h1>
+                {recordingsLoading && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500"></div>
+                )}
+                {error && (
+                  <button
+                    onClick={refetch}
+                    className="text-red-500 hover:text-red-600 text-sm"
+                    title="Click to retry"
+                  >
+                    ⚠️ Error
+                  </button>
+                )}
+              </div>
               <p className="text-sm" style={{ color: "#b0b0b0" }}>
                 Daily voice entries • {displayRange}
+                {stats && (
+                  <span className="ml-2">
+                    • {stats.totalSessions} sessions • {stats.totalRecordings}{" "}
+                    recordings
+                  </span>
+                )}
+                <br />
+                <span className="text-xs opacity-75">User ID: {userId}</span>
+                <br />
               </p>
             </div>
 
@@ -88,7 +244,6 @@ const OverviewPage: React.FC = () => {
           </div>
 
           <div className="flex-1 flex flex-col mt-4 space-y-4">
-            
             {/* day-of-week headers */}
             <div className="grid grid-cols-7 gap-2">
               {dayHeaders.map((day) => (
@@ -108,9 +263,12 @@ const OverviewPage: React.FC = () => {
                 <DayBox
                   key={idx}
                   date={date}
-                  logs={logData[idx + 1] || []}
-                  isToday={format(date, "yyyy-MM-dd") === format(today, "yyyy-MM-dd")}
-                  showPlan={showPlan}
+                  sessions={getSessionsForDate(date)}
+                  isToday={
+                    format(date, "yyyy-MM-dd") === format(today, "yyyy-MM-dd")
+                  }
+                  showPlan={showPlan || !!selectedSession}
+                  onSessionClick={setSelectedSession}
                 />
               ))}
 
@@ -120,6 +278,7 @@ const OverviewPage: React.FC = () => {
                   onClick={handlePlanButton}
                   showPlan={showPlan}
                   planCreated={planCreated}
+                  weekLabel={WeeklyPlanService.getWeekDisplayRange(addDays(today, weekOffset * 7))}
                 />
               </div>
             </WeekPanel>
@@ -130,8 +289,9 @@ const OverviewPage: React.FC = () => {
                 <DayBox
                   key={idx + 7}
                   date={addDays(date, 7)}
-                  logs={logData[idx + 7] || []}
-                  showPlan={showPlan}
+                  sessions={getSessionsForDate(addDays(date, 7))}
+                  showPlan={showPlan || !!selectedSession}
+                  onSessionClick={setSelectedSession}
                 />
               ))}
               {/* button under bottom week */}
@@ -140,48 +300,104 @@ const OverviewPage: React.FC = () => {
                   onClick={handlePlanButton}
                   showPlan={showPlan}
                   planCreated={planCreated}
+                  weekLabel={WeeklyPlanService.getWeekDisplayRange(addDays(today, weekOffset * 7))}
                 />
               </div>
             </WeekPanel>
           </div>
         </div>
 
-        {/* RIGHT panel: weekly plan form */}
-        {showPlan && (
-          <div className="w-1/2 bg-white border rounded-lg p-6 flex flex-col overflow-y-auto">
-            <h2 className="text-lg font-semibold" style={{ color: "#545454" }}>
-              Weekly Plan
-            </h2>
-            <p className="text-sm mb-4" style={{ color: "#b0b0b0" }}>
-              Voice entry transcript
-            </p>
+        {/* MIDDLE panel: session details or weekly plan form */}
+        {(selectedSession || showPlan) && (
+          <div
+            className={`${
+              selectedRecording ? "w-1/3" : "w-1/2"
+            } bg-white border rounded-lg p-6 flex flex-col overflow-y-auto`}
+          >
+            {selectedSession ? (
+              <SessionDetailView
+                session={selectedSession}
+                selectedRecording={selectedRecording}
+                onClose={() => {
+                  setSelectedSession(null);
+                  setSelectedRecording(null);
+                }}
+                onRecordingSelect={setSelectedRecording}
+              />
+            ) : (
+              <>
+                <h2
+                  className="text-lg font-semibold"
+                  style={{ color: "#545454" }}
+                >
+                  Weekly Plan
+                </h2>
+                <p className="text-sm mb-4" style={{ color: "#b0b0b0" }}>
+                  Voice entry transcript
+                </p>
 
-            {/* prompts + textareas */}
-            <div className="flex-1 space-y-4 overflow-y-auto">
-              {prompts.map((prompt, idx) => (
-                <div key={idx} className="flex flex-col">
-                  <label
-                    className="text-sm font-medium mb-1"
-                    style={{ color: "#545454" }}
-                  >
-                    {prompt}
-                  </label>
-                  <textarea
-                    className="border rounded p-2 text-sm"
-                    rows={3}
-                    style={{ borderColor: "#d4d4d4", color: "#545454" }}
-                  />
+                {/* prompts + textareas */}
+                <div className="flex-1 space-y-4 overflow-y-auto">
+                  {prompts.map((prompt, idx) => {
+                    const fieldNames: (keyof WeeklyPlanFormData)[] = [
+                      "idealWeek",
+                      "obstacles",
+                      "preventActions",
+                      "actionDetails",
+                      "ifThenPlans",
+                    ];
+                    const fieldName = fieldNames[idx];
+
+                    return (
+                      <div key={idx} className="flex flex-col">
+                        <label
+                          className="text-sm font-medium mb-1"
+                          style={{ color: "#545454" }}
+                        >
+                          {prompt}
+                        </label>
+                        <textarea
+                          className="border rounded p-2 text-sm"
+                          rows={3}
+                          style={{ borderColor: "#d4d4d4", color: "#545454" }}
+                          value={formData[fieldName]}
+                          onChange={(e) =>
+                            handleFormChange(fieldName, e.target.value)
+                          }
+                          placeholder={`Enter your response for: ${prompt}`}
+                        />
+                      </div>
+                    );
+                  })}
                 </div>
-              ))}
-            </div>
 
-            {/* save button */}
-            <button
-              onClick={handleSave}
-              className="mt-4 self-end bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-            >
-              Save
-            </button>
+                {/* save button */}
+                <button
+                  onClick={handleSave}
+                  disabled={isSaving}
+                  className="mt-4 self-end bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                >
+                  {isSaving && (
+                    <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  )}
+                  {isSaving
+                    ? "Saving..."
+                    : currentWeekPlan
+                    ? "Update Plan"
+                    : "Save Plan"}
+                </button>
+              </>
+            )}
+          </div>
+        )}
+
+        {/* RIGHT panel: Mental Model Viewer */}
+        {selectedRecording && (
+          <div className="w-1/3 flex flex-col">
+            <MentalModelViewer
+              recording={selectedRecording}
+              onClose={() => setSelectedRecording(null)}
+            />
           </div>
         )}
       </div>
@@ -194,7 +410,8 @@ const PlanButton: React.FC<{
   onClick: () => void;
   showPlan: boolean;
   planCreated: boolean;
-}> = ({ onClick, showPlan, planCreated }) => (
+  weekLabel?: string;
+}> = ({ onClick, showPlan, planCreated, weekLabel }) => (
   <button
     onClick={onClick}
     className={`flex items-center px-4 py-2 text-sm border rounded-full transition-colors ${
@@ -214,7 +431,9 @@ const PlanButton: React.FC<{
       alt="icon"
       className="w-4 h-4 mr-2"
     />
-    {planCreated ? "Review weekly behavior plan" : "Create weekly behavior plan"}
+    {planCreated
+      ? `Review weekly behavior plan ${weekLabel ? `(${weekLabel})` : ''}`
+      : `Create weekly behavior plan ${weekLabel ? `(${weekLabel})` : ''}`}
   </button>
 );
 
@@ -231,10 +450,17 @@ const WeekPanel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
 /* One day box */
 const DayBox: React.FC<{
   date: Date;
-  logs: string[];
+  sessions: RecordingSession[];
   isToday?: boolean;
   showPlan?: boolean;
-}> = ({ date, logs, isToday = false, showPlan = false }) => (
+  onSessionClick?: (session: RecordingSession) => void;
+}> = ({
+  date,
+  sessions,
+  isToday = false,
+  showPlan = false,
+  onSessionClick,
+}) => (
   <div
     className="bg-white rounded-[10px] p-2 flex flex-col items-center w-full min-h-[220px]"
     style={{ color: "#d4d4d4" }}
@@ -247,29 +473,59 @@ const DayBox: React.FC<{
       {format(date, "d")}
     </div>
 
-    {/* log entries: circles + times */}
-    {logs.length > 0 && (
+    {/* recording sessions: blue circles + completion times */}
+    {sessions.length > 0 && (
       <div className="mt-1 flex-1 flex flex-col gap-3 justify-center w-full">
-        {logs.map((time, idx) => (
+        {sessions.map((session, idx) => (
           <div
-            key={idx}
-            className="flex items-center justify-center border w-full"
+            key={session.sessionId}
+            className="flex items-center justify-center border w-full relative group cursor-pointer"
             style={{
               color: "#b0b0b0",
-              borderColor: "#b0b0b0",
-              borderRadius: "22px",  // radius of timestamp card
+              borderColor: session.isComplete ? "#4CAF50" : "#b0b0b0",
+              borderRadius: "22px",
               padding: showPlan ? "10px" : "10px 10px",
             }}
+            title={`${session.recordings.length} recordings${
+              session.isComplete ? " (Complete 5-step session)" : ""
+            }`}
+            onClick={() => onSessionClick?.(session)}
           >
             <span
-              className="bg-blue-500 rounded-full"
+              className={`rounded-full ${
+                session.isComplete ? "bg-blue-500" : "bg-gray-400"
+              }`}
               style={{
-                width: showPlan ? "16px" : "16px",  // circle size
+                width: showPlan ? "16px" : "16px",
                 height: showPlan ? "16px" : "16px",
               }}
             ></span>
-            {/* timestamp */}
-            {!showPlan && <span className="ml-2 text-sm">{time}</span>}
+            {/* completion time and recording count */}
+            {!showPlan && (
+              <div className="ml-2 text-sm flex flex-col items-start">
+                <span>{format(session.completedAt, "h:mm a")}</span>
+                <span className="text-xs opacity-75">
+                  {session.recordings.length}/5 recordings
+                </span>
+              </div>
+            )}
+
+            {/* Tooltip on hover */}
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+              {session.isComplete
+                ? "✅ Complete session"
+                : "⏳ Partial session"}
+              <br />
+              {session.recordings.length} recordings
+              {session.recordings.some(
+                (r) => r.transcriptionStatus === "completed"
+              ) && (
+                <>
+                  <br />
+                  📝 Transcribed
+                </>
+              )}
+            </div>
           </div>
         ))}
       </div>
