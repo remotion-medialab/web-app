@@ -54,14 +54,14 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
     const failed = session.recordings.filter(
       (r) => r.transcriptionStatus === "failed"
     ).length;
-    
+
     return {
       total,
       completed,
       processing,
       failed,
       isTranscribing: processing > 0,
-      percentage: Math.round((completed / total) * 100)
+      percentage: Math.round((completed / total) * 100),
     };
   }, [session.recordings]);
 
@@ -172,7 +172,8 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
             <div className="mt-2 flex items-center space-x-2">
               <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
               <span className="text-xs text-blue-600">
-                Transcribing... ({transcriptionProgress.completed} of {transcriptionProgress.total} complete)
+                Transcribing... ({transcriptionProgress.completed} of{" "}
+                {transcriptionProgress.total} complete)
               </span>
             </div>
           )}
@@ -225,7 +226,10 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
               style={{ width: `${transcriptionProgress.percentage}%` }}
             ></div>
           </div>
-          <div className="flex items-center space-x-4 text-xs" style={{ color: "#b0b0b0" }}>
+          <div
+            className="flex items-center space-x-4 text-xs"
+            style={{ color: "#b0b0b0" }}
+          >
             <span>✅ {transcriptionProgress.completed} completed</span>
             {transcriptionProgress.processing > 0 && (
               <span className="flex items-center space-x-1">
@@ -290,7 +294,9 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                 ) : recording.transcriptionStatus === "processing" ? (
                   <div className="flex items-center space-x-2">
                     <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
-                    <p className="italic text-blue-600">Transcribing audio...</p>
+                    <p className="italic text-blue-600">
+                      Transcribing audio...
+                    </p>
                   </div>
                 ) : recording.transcriptionStatus === "failed" ? (
                   <div className="flex items-center justify-between">

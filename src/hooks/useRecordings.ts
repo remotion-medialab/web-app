@@ -39,12 +39,21 @@ export const useRecordings = (userId: string | null): UseRecordingsReturn => {
 
       console.log('🔄 Fetching recordings for user:', userId);
 
-      // Fetch all data in parallel
-      const [sessionsData, sessionsByDayData, statsData] = await Promise.all([
-        RecordingsService.getUserRecordingSessions(userId),
-        RecordingsService.getUserRecordingsByDay(userId),
-        RecordingsService.getUserRecordingStats(userId),
-      ]);
+      // Fetch sessions once, then derive other data from it
+      const sessionsData = await RecordingsService.getUserRecordingSessions(userId);
+      
+      // Generate sessionsByDay from already-fetched sessions (avoid duplicate fetch)
+      const sessionsByDayData: Record<string, RecordingSession[]> = {};
+      sessionsData.forEach(session => {
+        const dayKey = session.completedAt.toISOString().split('T')[0]; // YYYY-MM-DD
+        if (!sessionsByDayData[dayKey]) {
+          sessionsByDayData[dayKey] = [];
+        }
+        sessionsByDayData[dayKey].push(session);
+      });
+
+      // Generate stats from already-fetched sessions (avoid duplicate fetch)
+      const statsData = RecordingsService.calculateStatsFromSessions(sessionsData);
 
       console.log('✅ Fetched recordings:', {
         sessions: sessionsData.length,

@@ -237,9 +237,17 @@ export class RecordingsService {
   
   /**
    * Get recordings grouped by day for calendar display
+   * @deprecated Use calculateStatsFromSessions to avoid duplicate fetching
    */
   static async getUserRecordingsByDay(userId: string): Promise<Record<string, RecordingSession[]>> {
     const sessions = await this.getUserRecordingSessions(userId);
+    return this.groupSessionsByDay(sessions);
+  }
+
+  /**
+   * Group already-fetched sessions by day (helper method)
+   */
+  static groupSessionsByDay(sessions: RecordingSession[]): Record<string, RecordingSession[]> {
     const recordingsByDay: Record<string, RecordingSession[]> = {};
     
     sessions.forEach(session => {
@@ -256,16 +264,15 @@ export class RecordingsService {
   }
   
   /**
-   * Get summary statistics
+   * Calculate stats from already-fetched sessions (helper method to avoid duplicate fetching)
    */
-  static async getUserRecordingStats(userId: string): Promise<{
+  static calculateStatsFromSessions(sessions: RecordingSession[]): {
     totalSessions: number;
     completeSessions: number;
     totalRecordings: number;
     transcribedRecordings: number;
     averageSessionsPerWeek: number;
-  }> {
-    const sessions = await this.getUserRecordingSessions(userId);
+  } {
     const totalRecordings = sessions.reduce((sum, session) => sum + session.recordings.length, 0);
     const transcribedRecordings = sessions.reduce((sum, session) => 
       sum + session.recordings.filter(r => r.transcriptionStatus === 'completed').length, 0
@@ -282,8 +289,22 @@ export class RecordingsService {
       completeSessions: sessions.filter(s => s.isComplete).length,
       totalRecordings,
       transcribedRecordings,
-      averageSessionsPerWeek: Number((sessions.length / weeksDiff).toFixed(1))
+      averageSessionsPerWeek: sessions.length / weeksDiff,
     };
   }
-}
 
+  /**
+   * Get summary statistics
+   * @deprecated Use calculateStatsFromSessions to avoid duplicate fetching
+   */
+  static async getUserRecordingStats(userId: string): Promise<{
+    totalSessions: number;
+    completeSessions: number;
+    totalRecordings: number;
+    transcribedRecordings: number;
+    averageSessionsPerWeek: number;
+  }> {
+    const sessions = await this.getUserRecordingSessions(userId);
+    return this.calculateStatsFromSessions(sessions);
+  }
+}
