@@ -42,6 +42,29 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
     Set<string>
   >(new Set());
 
+  // Calculate transcription progress
+  const transcriptionProgress = React.useMemo(() => {
+    const total = session.recordings.length;
+    const completed = session.recordings.filter(
+      (r) => r.transcriptionStatus === "completed" && r.transcription?.text
+    ).length;
+    const processing = session.recordings.filter(
+      (r) => r.transcriptionStatus === "processing"
+    ).length;
+    const failed = session.recordings.filter(
+      (r) => r.transcriptionStatus === "failed"
+    ).length;
+    
+    return {
+      total,
+      completed,
+      processing,
+      failed,
+      isTranscribing: processing > 0,
+      percentage: Math.round((completed / total) * 100)
+    };
+  }, [session.recordings]);
+
   // Load counterfactuals for all recordings in the session
   useEffect(() => {
     const loadAllCounterfactuals = async () => {
@@ -145,6 +168,14 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
           <p className="text-sm" style={{ color: "#b0b0b0" }}>
             Voice entry transcript
           </p>
+          {transcriptionProgress.isTranscribing && (
+            <div className="mt-2 flex items-center space-x-2">
+              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-xs text-blue-600">
+                Transcribing... ({transcriptionProgress.completed} of {transcriptionProgress.total} complete)
+              </span>
+            </div>
+          )}
         </div>
         <div className="flex items-center space-x-3">
           {session.recordings.some(
@@ -176,6 +207,38 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
           </button>
         </div>
       </div>
+
+      {/* Transcription Progress Bar */}
+      {transcriptionProgress.isTranscribing && (
+        <div className="mb-6 bg-gray-100 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium" style={{ color: "#545454" }}>
+              Transcription Progress
+            </span>
+            <span className="text-sm" style={{ color: "#b0b0b0" }}>
+              {transcriptionProgress.completed}/{transcriptionProgress.total}
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+            <div
+              className="bg-blue-500 h-2 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${transcriptionProgress.percentage}%` }}
+            ></div>
+          </div>
+          <div className="flex items-center space-x-4 text-xs" style={{ color: "#b0b0b0" }}>
+            <span>✅ {transcriptionProgress.completed} completed</span>
+            {transcriptionProgress.processing > 0 && (
+              <span className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <span>{transcriptionProgress.processing} processing</span>
+              </span>
+            )}
+            {transcriptionProgress.failed > 0 && (
+              <span>❌ {transcriptionProgress.failed} failed</span>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Recordings with questions and transcriptions */}
       <div className="flex-1 space-y-6 overflow-y-auto">
@@ -225,7 +288,10 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                     )}
                   </>
                 ) : recording.transcriptionStatus === "processing" ? (
-                  <p className="italic">Transcribing...</p>
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="italic text-blue-600">Transcribing audio...</p>
+                  </div>
                 ) : recording.transcriptionStatus === "failed" ? (
                   <div className="flex items-center justify-between">
                     <p className="italic text-red-500">Transcription failed</p>
