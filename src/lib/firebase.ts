@@ -1,8 +1,8 @@
 // src/lib/firebase.ts
 import { initializeApp, getApp, getApps } from "firebase/app";
-import { getFirestore, connectFirestoreEmulator } from "firebase/firestore";
-import { getAuth, connectAuthEmulator } from "firebase/auth";
-import { getFunctions, connectFunctionsEmulator } from "firebase/functions";
+import { getFirestore } from "firebase/firestore";
+import { getAuth } from "firebase/auth";
+import { getFunctions } from "firebase/functions";
 
 // Updated to use the same Firebase project as your mobile app
 const firebaseConfig = {

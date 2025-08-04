@@ -17,7 +17,6 @@ const SignInPage: React.FC = () => {
   const [error, setError] = useState("");
   const navigate = useNavigate();
 
-  const nextStep = () => setStep((prev) => Math.min(prev + 1, 2));
   const prevStep = () => setStep((prev) => Math.max(prev - 1, 0));
   const goToSignUp = () => setStep(2);
   const goToSignIn = () => setStep(1);

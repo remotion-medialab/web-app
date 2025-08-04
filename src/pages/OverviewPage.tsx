@@ -1,7 +1,7 @@
 // src/pages/OverviewPage.tsx
 
 import React, { useState, useEffect } from "react";
-import { addDays, startOfWeek, format, isSameDay } from "date-fns";
+import { addDays, startOfWeek, format } from "date-fns";
 import { useAuth } from "../contexts/AuthContext";
 import { useRecordings } from "../hooks/useRecordings";
 import type { RecordingSession } from "../lib/recordingsService";
@@ -33,7 +33,9 @@ const OverviewPage: React.FC = () => {
     null
   );
   const [showMentalModel, setShowMentalModel] = useState(false);
-  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | undefined>(undefined);
+  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<
+    number | undefined
+  >(undefined);
   const [currentWeekPlan, setCurrentWeekPlan] = useState<WeeklyPlan | null>(
     null
   );
@@ -47,9 +49,8 @@ const OverviewPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   // Auth and recordings data
-  const { userId, signInAsTestUser, loading: authLoading } = useAuth();
+  const { userId, loading: authLoading } = useAuth();
   const {
-    sessions,
     sessionsByDay,
     loading: recordingsLoading,
     error,
@@ -280,7 +281,9 @@ const OverviewPage: React.FC = () => {
                   onClick={handlePlanButton}
                   showPlan={showPlan}
                   planCreated={planCreated}
-                  weekLabel={WeeklyPlanService.getWeekDisplayRange(addDays(today, weekOffset * 7))}
+                  weekLabel={WeeklyPlanService.getWeekDisplayRange(
+                    addDays(today, weekOffset * 7)
+                  )}
                 />
               </div>
             </WeekPanel>
@@ -302,7 +305,9 @@ const OverviewPage: React.FC = () => {
                   onClick={handlePlanButton}
                   showPlan={showPlan}
                   planCreated={planCreated}
-                  weekLabel={WeeklyPlanService.getWeekDisplayRange(addDays(today, weekOffset * 7))}
+                  weekLabel={WeeklyPlanService.getWeekDisplayRange(
+                    addDays(today, weekOffset * 7)
+                  )}
                 />
               </div>
             </WeekPanel>
@@ -403,8 +408,7 @@ const OverviewPage: React.FC = () => {
         {(selectedRecording || (selectedSession && showMentalModel)) && (
           <div className="w-1/3 flex flex-col">
             <MentalModelViewer
-              recording={selectedRecording || undefined}
-              session={selectedSession || undefined}
+              session={selectedSession!}
               onClose={() => {
                 setSelectedRecording(null);
                 setShowMentalModel(false);
@@ -447,8 +451,8 @@ const PlanButton: React.FC<{
       className="w-4 h-4 mr-2"
     />
     {planCreated
-      ? `Review weekly behavior plan ${weekLabel ? `(${weekLabel})` : ''}`
-      : `Create weekly behavior plan ${weekLabel ? `(${weekLabel})` : ''}`}
+      ? `Review weekly behavior plan ${weekLabel ? `(${weekLabel})` : ""}`
+      : `Create weekly behavior plan ${weekLabel ? `(${weekLabel})` : ""}`}
   </button>
 );
 
@@ -491,7 +495,7 @@ const DayBox: React.FC<{
     {/* recording sessions: blue circles + completion times */}
     {sessions.length > 0 && (
       <div className="mt-1 flex-1 flex flex-col gap-3 justify-center w-full">
-        {sessions.map((session, idx) => (
+        {sessions.map((session) => (
           <div
             key={session.sessionId}
             className="flex items-center justify-center border w-full relative group cursor-pointer"

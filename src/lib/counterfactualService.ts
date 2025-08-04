@@ -96,7 +96,7 @@ export class CounterfactualService {
       const allCounterfactuals: Counterfactual[] = [];
 
       // Use session-level counterfactual generation
-      const result = await this.generateSessionCounterfactuals(request.userId, request.recordings);
+      const result = await this.generateSessionCounterfactuals(request.recordings);
       if (result.success) {
         allCounterfactuals.push(...result.counterfactuals);
       }
@@ -120,7 +120,6 @@ export class CounterfactualService {
    * Generate counterfactuals for a complete 5-step session
    */
   static async generateSessionCounterfactuals(
-    userId: string,
     recordings: Recording[]
   ): Promise<CounterfactualGenerationResponse> {
     try {
@@ -186,19 +185,7 @@ export class CounterfactualService {
     return phaseNames[stepNumber] || 'situationSelection';
   }
 
-  /**
-   * Map emotion regulation phase names to step numbers
-   */
-  private static getStepNumberFromPhase(phase: string): number {
-    const phaseMap: Record<string, number> = {
-      'situationSelection': 0,
-      'situationModification': 1,
-      'attentionalDeployment': 2,
-      'cognitiveChange': 3,
-      'responseModulation': 4
-    };
-    return phaseMap[phase] || 0;
-  }
+
 
   /**
    * Get counterfactuals for a specific step from cached results
