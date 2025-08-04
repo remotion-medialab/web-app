@@ -1,3 +1,4 @@
+
 import { db } from './firebase';
 import { 
   collection, 
@@ -56,14 +57,17 @@ export class WeeklyPlanService {
       isCompleted: true,
       associatedSessionIds: existingPlan?.associatedSessionIds || []
     };
-
-    const docRef = doc(db, this.COLLECTION_NAME, planId);
-    await setDoc(docRef, {
+    
+    const docData = {
       ...planData,
       createdAt: Timestamp.fromDate(planData.createdAt),
       updatedAt: Timestamp.fromDate(planData.updatedAt)
-    });
-
+    };
+    
+    const docRef = doc(db, this.COLLECTION_NAME, planId);
+    await setDoc(docRef, docData);
+    
+    console.log('✅ Weekly plan saved to Firestore:', planId);
     return planData;
   }
 

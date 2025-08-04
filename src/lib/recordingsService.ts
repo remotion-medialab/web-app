@@ -1,7 +1,17 @@
 // src/lib/recordingsService.ts
-import { collection, query, orderBy, getDocs, where, Timestamp } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from './firebase';
-import { WeeklyPlanService } from './weeklyPlanService';
+
+export interface CounterfactualData {
+  alternatives: string[]; // Array of 5 generated alternatives
+  selectedAlternative?: {
+    index: number; // 0-4 corresponding to alternatives array
+    text: string;
+    selectedAt: Date;
+  };
+  generatedAt: Date;
+  questionIndex: number; // Which question (0-4) this relates to
+}
 
 export interface Recording {
   id: string;
@@ -25,6 +35,7 @@ export interface Recording {
     primaryActivity: string;
     confidence: number;
   };
+  counterfactuals?: CounterfactualData; // New field for counterfactuals
 }
 
 export interface RecordingSession {
@@ -91,6 +102,20 @@ export class RecordingsService {
           activitySummary: data.activitySummary ? {
             primaryActivity: data.activitySummary.primaryActivity || 'unknown',
             confidence: data.activitySummary.confidence || 0
+          } : undefined,
+          counterfactuals: data.counterfactuals ? {
+            alternatives: data.counterfactuals.alternatives || [],
+            selectedAlternative: data.counterfactuals.selectedAlternative ? {
+              index: data.counterfactuals.selectedAlternative.index || 0,
+              text: data.counterfactuals.selectedAlternative.text || '',
+              selectedAt: data.counterfactuals.selectedAlternative.selectedAt instanceof Timestamp
+                ? data.counterfactuals.selectedAlternative.selectedAt.toDate()
+                : new Date(data.counterfactuals.selectedAlternative.selectedAt || Date.now()),
+            } : undefined,
+            generatedAt: data.counterfactuals.generatedAt instanceof Timestamp
+              ? data.counterfactuals.generatedAt.toDate()
+              : new Date(data.counterfactuals.generatedAt || Date.now()),
+            questionIndex: data.counterfactuals.questionIndex || 0,
           } : undefined
         };
       });
@@ -179,29 +204,31 @@ export class RecordingsService {
   
   /**
    * Associate recording sessions with weekly plans automatically
+   * TODO: Implement when WeeklyPlanService is available
    */
   static async associateSessionsWithWeeklyPlans(userId: string): Promise<void> {
     try {
-      const sessions = await this.getUserRecordingSessions(userId);
-      
-      // Group sessions by week and associate with plans
-      const sessionsByWeek: Record<string, string[]> = {};
-      
-      sessions.forEach(session => {
-        const { weekStartDate } = WeeklyPlanService.getWeekBounds(session.completedAt);
-        
-        if (!sessionsByWeek[weekStartDate]) {
-          sessionsByWeek[weekStartDate] = [];
-        }
-        
-        sessionsByWeek[weekStartDate].push(session.sessionId);
-      });
-      
-      // Associate each week's sessions with its plan (if it exists)
-      for (const [weekStartDate, sessionIds] of Object.entries(sessionsByWeek)) {
-        const weekDate = new Date(weekStartDate);
-        await WeeklyPlanService.associateSessionsWithPlan(userId, sessionIds, weekDate);
-      }
+      console.log('WeeklyPlanService integration temporarily disabled for user:', userId);
+      // const sessions = await this.getUserRecordingSessions(userId);
+      // 
+      // // Group sessions by week and associate with plans
+      // const sessionsByWeek: Record<string, string[]> = {};
+      // 
+      // sessions.forEach(session => {
+      //   const { weekStartDate } = WeeklyPlanService.getWeekBounds(session.completedAt);
+      //   
+      //   if (!sessionsByWeek[weekStartDate]) {
+      //     sessionsByWeek[weekStartDate] = [];
+      //   }
+      //   
+      //   sessionsByWeek[weekStartDate].push(session.sessionId);
+      // });
+      // 
+      // // Associate each week's sessions with its plan (if it exists)
+      // for (const [weekStartDate, sessionIds] of Object.entries(sessionsByWeek)) {
+      //   const weekDate = new Date(weekStartDate);
+      //   await WeeklyPlanService.associateSessionsWithPlan(userId, sessionIds, weekDate);
+      // }
       
     } catch (error) {
       console.error('Error associating sessions with weekly plans:', error);
@@ -260,5 +287,3 @@ export class RecordingsService {
   }
 }
 
-// Ensure exports are available
-export type { Recording, RecordingSession };

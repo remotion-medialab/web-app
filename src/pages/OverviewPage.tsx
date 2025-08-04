@@ -32,6 +32,8 @@ const OverviewPage: React.FC = () => {
   const [selectedRecording, setSelectedRecording] = useState<Recording | null>(
     null
   );
+  const [showMentalModel, setShowMentalModel] = useState(false);
+  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<number | undefined>(undefined);
   const [currentWeekPlan, setCurrentWeekPlan] = useState<WeeklyPlan | null>(
     null
   );
@@ -321,8 +323,14 @@ const OverviewPage: React.FC = () => {
                 onClose={() => {
                   setSelectedSession(null);
                   setSelectedRecording(null);
+                  setShowMentalModel(false);
+                  setSelectedQuestionIndex(undefined);
                 }}
                 onRecordingSelect={setSelectedRecording}
+                showMentalModel={showMentalModel}
+                onToggleMentalModel={() => setShowMentalModel(!showMentalModel)}
+                selectedQuestionIndex={selectedQuestionIndex}
+                onQuestionSelect={setSelectedQuestionIndex}
               />
             ) : (
               <>
@@ -392,11 +400,18 @@ const OverviewPage: React.FC = () => {
         )}
 
         {/* RIGHT panel: Mental Model Viewer */}
-        {selectedRecording && (
+        {(selectedRecording || (selectedSession && showMentalModel)) && (
           <div className="w-1/3 flex flex-col">
             <MentalModelViewer
-              recording={selectedRecording}
-              onClose={() => setSelectedRecording(null)}
+              recording={selectedRecording || undefined}
+              session={selectedSession || undefined}
+              onClose={() => {
+                setSelectedRecording(null);
+                setShowMentalModel(false);
+                setSelectedQuestionIndex(undefined);
+              }}
+              selectedQuestionIndex={selectedQuestionIndex}
+              onQuestionSelect={setSelectedQuestionIndex}
             />
           </div>
         )}

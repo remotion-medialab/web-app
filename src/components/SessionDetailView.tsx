@@ -1,21 +1,138 @@
-import React from 'react';
-import { format } from 'date-fns';
-import type { RecordingSession, Recording } from '../lib/recordingsService';
-import { getQuestionForStep } from '../constants/recordingQuestions';
+import React, { useState, useEffect } from "react";
+import { format } from "date-fns";
+import toast from "react-hot-toast";
+import type {
+  RecordingSession,
+  Recording,
+  CounterfactualData,
+} from "../lib/recordingsService";
+import { getQuestionForStep } from "../constants/recordingQuestions";
+import MentalModelViewer from "./MentalModelViewer";
+import { CounterfactualFirebaseService } from "../lib/counterfactualFirebaseService";
+import { useAuth } from "../contexts/AuthContext";
+import { httpsCallable } from "firebase/functions";
+import { functions } from "../lib/firebase";
 
 interface SessionDetailViewProps {
   session: RecordingSession;
   selectedRecording?: Recording | null;
   onClose: () => void;
   onRecordingSelect?: (recording: Recording) => void;
+  showMentalModel?: boolean;
+  onToggleMentalModel?: () => void;
+  selectedQuestionIndex?: number;
+  onQuestionSelect?: (index: number) => void;
 }
 
-const SessionDetailView: React.FC<SessionDetailViewProps> = ({ 
-  session, 
-  selectedRecording, 
-  onClose, 
-  onRecordingSelect 
+const SessionDetailView: React.FC<SessionDetailViewProps> = ({
+  session,
+  selectedRecording,
+  onClose,
+  onRecordingSelect,
+  showMentalModel,
+  onToggleMentalModel,
+  selectedQuestionIndex,
+  onQuestionSelect,
 }) => {
+  const { userId } = useAuth();
+  const [recordingCounterfactuals, setRecordingCounterfactuals] = useState<
+    Record<string, CounterfactualData>
+  >({});
+  const [retryingTranscriptions, setRetryingTranscriptions] = useState<
+    Set<string>
+  >(new Set());
+
+  // Load counterfactuals for all recordings in the session
+  useEffect(() => {
+    const loadAllCounterfactuals = async () => {
+      if (!userId) return;
+
+      try {
+        const counterfactualData: Record<string, CounterfactualData> = {};
+
+        for (const recording of session.recordings) {
+          const data = await CounterfactualFirebaseService.getCounterfactuals(
+            userId,
+            recording.id
+          );
+          if (data) {
+            counterfactualData[recording.id] = data;
+          }
+        }
+
+        setRecordingCounterfactuals(counterfactualData);
+        console.log(
+          "📋 Loaded counterfactuals for session:",
+          counterfactualData
+        );
+      } catch (error) {
+        console.error("❌ Failed to load session counterfactuals:", error);
+      }
+    };
+
+    loadAllCounterfactuals();
+  }, [userId, session.recordings]);
+
+  const retryTranscription = async (recording: Recording) => {
+    if (!userId || retryingTranscriptions.has(recording.id)) return;
+
+    setRetryingTranscriptions((prev) => new Set(prev).add(recording.id));
+
+    try {
+      const retryFunction = httpsCallable(functions, "retryTranscription");
+      const result = await retryFunction({
+        recordingId: recording.id,
+      });
+
+      console.log("✅ Transcription retry result:", result.data);
+
+      // Show success message
+      toast.success(
+        `Transcription retry started for "${recording.title}". Please refresh to see the updated status.`
+      );
+    } catch (error) {
+      console.error("❌ Failed to retry transcription:", error);
+      toast.error("Failed to retry transcription. Please try again.");
+    } finally {
+      setRetryingTranscriptions((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(recording.id);
+        return newSet;
+      });
+    }
+  };
+
+  const retryAllFailedTranscriptions = async () => {
+    if (!userId) return;
+
+    try {
+      const retryAllFunction = httpsCallable(
+        functions,
+        "retryAllFailedTranscriptions"
+      );
+      const result = await retryAllFunction();
+
+      console.log("✅ Batch retry result:", result.data);
+
+      toast.success(
+        `Batch transcription retry completed. Please refresh to see updated statuses.`
+      );
+    } catch (error) {
+      console.error("❌ Failed to retry all transcriptions:", error);
+      toast.error("Failed to retry transcriptions. Please try again.");
+    }
+  };
+
+  if (showMentalModel) {
+    return (
+      <MentalModelViewer
+        session={session}
+        onClose={onClose}
+        selectedQuestionIndex={selectedQuestionIndex}
+        onQuestionSelect={onQuestionSelect}
+      />
+    );
+  }
 
   return (
     <>
@@ -23,43 +140,70 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
       <div className="flex justify-between items-start mb-6">
         <div>
           <h2 className="text-lg font-semibold" style={{ color: "#545454" }}>
-            {format(session.completedAt, 'EEEE, MMMM d, yyyy h:mm a')}
+            {format(session.completedAt, "EEEE, MMMM d, yyyy h:mm a")}
           </h2>
           <p className="text-sm" style={{ color: "#b0b0b0" }}>
             Voice entry transcript
           </p>
         </div>
-        <button
-          onClick={onClose}
-          className="text-gray-400 hover:text-gray-600 text-xl"
-          title="Close"
-        >
-          ×
-        </button>
+        <div className="flex items-center space-x-3">
+          {session.recordings.some(
+            (r) =>
+              r.transcriptionStatus === "failed" ||
+              (!r.transcription?.text && r.transcriptionStatus !== "processing")
+          ) && (
+            <button
+              onClick={retryAllFailedTranscriptions}
+              className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
+              title="Retry all failed transcriptions"
+            >
+              🔄 Retry All
+            </button>
+          )}
+          <button
+            onClick={onToggleMentalModel}
+            className="px-3 py-1 text-sm bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
+            title="View mental model"
+          >
+            {showMentalModel ? "View Text" : "View Model"}
+          </button>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 text-xl"
+            title="Close"
+          >
+            ×
+          </button>
+        </div>
       </div>
 
       {/* Recordings with questions and transcriptions */}
       <div className="flex-1 space-y-6 overflow-y-auto">
         {session.recordings
           .sort((a, b) => a.stepNumber - b.stepNumber)
-          .map((recording, idx) => (
-            <div 
-              key={recording.id} 
+          .map((recording) => (
+            <div
+              key={recording.id}
               className={`space-y-3 cursor-pointer transition-colors ${
-                selectedRecording?.id === recording.id 
-                  ? 'bg-blue-100 border-2 border-blue-300' 
-                  : 'hover:bg-blue-50'
+                selectedRecording?.id === recording.id
+                  ? "bg-blue-100 border-2 border-blue-300"
+                  : "hover:bg-blue-50"
               }`}
-              onClick={() => onRecordingSelect?.(recording)}
+              onClick={() => {
+                onRecordingSelect?.(recording);
+                onQuestionSelect?.(recording.stepNumber);
+              }}
               title="Click to view mental model"
             >
               {/* Question with blue circle */}
               <div className="flex items-start gap-3">
-                <div 
-                  className="w-6 h-6 rounded-full bg-blue-500 flex-shrink-0 mt-1"
-                ></div>
-                <h3 className="font-medium text-base" style={{ color: "#545454" }}>
-                  {recording.question || getQuestionForStep(recording.stepNumber)}
+                <div className="w-6 h-6 rounded-full bg-blue-500 flex-shrink-0 mt-1"></div>
+                <h3
+                  className="font-medium text-base"
+                  style={{ color: "#545454" }}
+                >
+                  {recording.question ||
+                    getQuestionForStep(recording.stepNumber)}
                 </h3>
               </div>
 
@@ -70,25 +214,50 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
               >
                 {recording.transcription?.text ? (
                   <>
-                    <p className="whitespace-pre-wrap leading-relaxed">{recording.transcription.text}</p>
+                    <p className="whitespace-pre-wrap leading-relaxed">
+                      {recording.transcription.text}
+                    </p>
                     {recording.transcription.confidence > 0 && (
                       <p className="text-xs mt-2" style={{ color: "#b0b0b0" }}>
-                        Confidence: {(recording.transcription.confidence * 100).toFixed(1)}%
+                        Confidence:{" "}
+                        {(recording.transcription.confidence * 100).toFixed(1)}%
                       </p>
                     )}
                   </>
-                ) : recording.transcriptionStatus === 'processing' ? (
+                ) : recording.transcriptionStatus === "processing" ? (
                   <p className="italic">Transcribing...</p>
-                ) : recording.transcriptionStatus === 'failed' ? (
-                  <p className="italic text-red-500">Transcription failed</p>
+                ) : recording.transcriptionStatus === "failed" ? (
+                  <div className="flex items-center justify-between">
+                    <p className="italic text-red-500">Transcription failed</p>
+                    <button
+                      onClick={() => retryTranscription(recording)}
+                      disabled={retryingTranscriptions.has(recording.id)}
+                      className="ml-2 px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {retryingTranscriptions.has(recording.id)
+                        ? "Retrying..."
+                        : "Retry"}
+                    </button>
+                  </div>
                 ) : (
-                  <p className="italic">No transcription available</p>
+                  <div className="flex items-center justify-between">
+                    <p className="italic">No transcription available</p>
+                    <button
+                      onClick={() => retryTranscription(recording)}
+                      disabled={retryingTranscriptions.has(recording.id)}
+                      className="ml-2 px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {retryingTranscriptions.has(recording.id)
+                        ? "Transcribing..."
+                        : "Transcribe"}
+                    </button>
+                  </div>
                 )}
-                
+
                 {/* Play button */}
                 {recording.audioUri && (
                   <div className="absolute bottom-3 right-3">
-                    <div 
+                    <div
                       className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors"
                       onClick={(e) => {
                         e.stopPropagation();
@@ -96,22 +265,55 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                         audio.play().catch(console.error);
                       }}
                     >
-                      <svg className="w-4 h-4 text-gray-600 ml-0.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z"/>
+                      <svg
+                        className="w-4 h-4 text-gray-600 ml-0.5"
+                        fill="currentColor"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
                       </svg>
                     </div>
                   </div>
                 )}
               </div>
 
+              {/* Selected Counterfactual if available */}
+              {recordingCounterfactuals[recording.id]?.selectedAlternative && (
+                <div className="ml-9 mt-3">
+                  <div className="flex items-start gap-3 mb-2">
+                    <div className="w-6 h-6 rounded-full bg-blue-500 flex-shrink-0 mt-1"></div>
+                    <h4
+                      className="font-medium text-base"
+                      style={{ color: "#545454" }}
+                    >
+                      Alternative{" "}
+                      {String.fromCharCode(
+                        65 +
+                          (recordingCounterfactuals[recording.id]
+                            ?.selectedAlternative?.index ?? 0)
+                      )}
+                    </h4>
+                  </div>
+                  <div
+                    className="bg-white border border-gray-200 rounded-2xl p-4 text-sm ml-9"
+                    style={{ color: "#666666" }}
+                  >
+                    <p className="whitespace-pre-wrap leading-relaxed">
+                      {recordingCounterfactuals[recording.id]
+                        ?.selectedAlternative?.text ?? ""}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Activity summary if available */}
               {recording.activitySummary && (
                 <p className="text-xs" style={{ color: "#b0b0b0" }}>
-                  Activity: {recording.activitySummary.primaryActivity} 
-                  ({(recording.activitySummary.confidence * 100).toFixed(0)}% confidence)
+                  Activity: {recording.activitySummary.primaryActivity}(
+                  {(recording.activitySummary.confidence * 100).toFixed(0)}%
+                  confidence)
                 </p>
               )}
-
             </div>
           ))}
       </div>
@@ -119,11 +321,15 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
       {/* Footer info */}
       <div className="mt-6 pt-4 border-t border-gray-200">
         <p className="text-xs" style={{ color: "#b0b0b0" }}>
-          {session.recordings.length} of 5 steps completed • 
-          {session.recordings.filter(r => r.transcriptionStatus === 'completed').length} transcribed
+          {session.recordings.length} of 5 steps completed •
+          {
+            session.recordings.filter(
+              (r) => r.transcriptionStatus === "completed"
+            ).length
+          }{" "}
+          transcribed
         </p>
       </div>
-
     </>
   );
 };

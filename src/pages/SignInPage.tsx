@@ -62,12 +62,9 @@ const SignInPage: React.FC = () => {
   };
 
   const handleDemoAccess = () => {
-    // For demo purposes - sign in as test user
-    setEmail("demo@example.com");
-    setPassword("demo123");
-
-    // Simulate demo login by navigating directly
-    navigate("/insights");
+    // For demo purposes, encourage users to create an account
+    setError("Please create an account or sign in to access the app.");
+    setStep(2); // Go to sign up
   };
 
   return (
@@ -136,7 +133,7 @@ const SignInPage: React.FC = () => {
                 className="text-blue-400 text-sm underline hover:text-blue-600 transition mt-4"
                 style={{ fontFamily: "'SF Pro Display', sans-serif" }}
               >
-                View Demo Data
+                Need an account? Click here
               </button>
             </div>
           </div>
