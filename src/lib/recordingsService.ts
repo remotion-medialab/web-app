@@ -137,8 +137,17 @@ export class RecordingsService {
   private static groupRecordingsIntoSessions(recordings: Recording[]): RecordingSession[] {
     const sessions: RecordingSession[] = [];
     
-    // Sort recordings by creation date (newest first)
-    const sortedRecordings = [...recordings].sort((a, b) => 
+    // Remove duplicate recordings by ID to prevent issues
+    const uniqueRecordings = recordings.reduce((acc, recording) => {
+      const existing = acc.find(r => r.id === recording.id);
+      if (!existing) {
+        acc.push(recording);
+      }
+      return acc;
+    }, [] as Recording[]);
+    
+    // Sort deduplicated recordings by creation date (newest first)
+    const sortedRecordings = [...uniqueRecordings].sort((a, b) => 
       b.createdAt.getTime() - a.createdAt.getTime()
     );
     
@@ -178,7 +187,16 @@ export class RecordingsService {
       sessions.push(this.createSession(currentSession));
     }
     
-    return sessions;
+    // Remove duplicate sessions if any exist (extra protection)
+    const uniqueSessions = sessions.reduce((acc, session) => {
+      const existing = acc.find(s => s.sessionId === session.sessionId);
+      if (!existing) {
+        acc.push(session);
+      }
+      return acc;
+    }, [] as RecordingSession[]);
+    
+    return uniqueSessions;
   }
   
   /**

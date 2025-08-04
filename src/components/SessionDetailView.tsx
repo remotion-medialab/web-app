@@ -125,27 +125,6 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
     }
   };
 
-  const retryAllFailedTranscriptions = async () => {
-    if (!userId) return;
-
-    try {
-      const retryAllFunction = httpsCallable(
-        functions,
-        "retryAllFailedTranscriptions"
-      );
-      const result = await retryAllFunction();
-
-      console.log("✅ Batch retry result:", result.data);
-
-      toast.success(
-        `Batch transcription retry completed. Please refresh to see updated statuses.`
-      );
-    } catch (error) {
-      console.error("❌ Failed to retry all transcriptions:", error);
-      toast.error("Failed to retry transcriptions. Please try again.");
-    }
-  };
-
   if (showMentalModel) {
     return (
       <MentalModelViewer
@@ -177,35 +156,6 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
               </span>
             </div>
           )}
-        </div>
-        <div className="flex items-center space-x-3">
-          {session.recordings.some(
-            (r) =>
-              r.transcriptionStatus === "failed" ||
-              (!r.transcription?.text && r.transcriptionStatus !== "processing")
-          ) && (
-            <button
-              onClick={retryAllFailedTranscriptions}
-              className="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600 transition-colors"
-              title="Retry all failed transcriptions"
-            >
-              🔄 Retry All
-            </button>
-          )}
-          <button
-            onClick={onToggleMentalModel}
-            className="px-3 py-1 text-sm bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors"
-            title="View mental model"
-          >
-            {showMentalModel ? "View Text" : "View Model"}
-          </button>
-          <button
-            onClick={onClose}
-            className="text-gray-400 hover:text-gray-600 text-xl"
-            title="Close"
-          >
-            ×
-          </button>
         </div>
       </div>
 

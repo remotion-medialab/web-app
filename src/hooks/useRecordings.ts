@@ -23,6 +23,7 @@ export const useRecordings = (userId: string | null): UseRecordingsReturn => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<UseRecordingsReturn['stats']>(null);
+  const [isCurrentlyFetching, setIsCurrentlyFetching] = useState(false);
 
   const fetchRecordings = async () => {
     if (!userId) {
@@ -33,7 +34,14 @@ export const useRecordings = (userId: string | null): UseRecordingsReturn => {
       return;
     }
 
+    // Prevent concurrent fetches (React StrictMode protection)
+    if (isCurrentlyFetching) {
+      console.log('🚫 Fetch already in progress, skipping duplicate call');
+      return;
+    }
+
     try {
+      setIsCurrentlyFetching(true);
       setLoading(true);
       setError(null);
 
@@ -73,6 +81,7 @@ export const useRecordings = (userId: string | null): UseRecordingsReturn => {
       setStats(null);
     } finally {
       setLoading(false);
+      setIsCurrentlyFetching(false);
     }
   };
 
@@ -81,12 +90,17 @@ export const useRecordings = (userId: string | null): UseRecordingsReturn => {
     fetchRecordings();
   }, [userId]);
 
+  const refetch = async () => {
+    console.log('🔄 Manual refetch requested');
+    await fetchRecordings();
+  };
+
   return {
     sessions,
     sessionsByDay,
     loading,
     error,
-    refetch: fetchRecordings,
+    refetch,
     stats,
   };
 };
