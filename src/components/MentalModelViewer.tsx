@@ -380,7 +380,13 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
 
       console.log("Sending full JSON to counterfactual API:", requestData);
 
-      const response = await fetch("http://localhost:8000/counterfactual", {
+      const API_BASE_URL =
+        import.meta.env.VITE_COUNTERFACTUAL_API_URL ||
+        (import.meta.env.DEV
+          ? "http://localhost:8000"
+          : "https://coping-counterfactual.fly.dev");
+
+      const response = await fetch(`${API_BASE_URL}/counterfactual`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
