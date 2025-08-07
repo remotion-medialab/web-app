@@ -7,6 +7,10 @@ import { useAuth } from "../contexts/AuthContext";
 import { WeeklyPlanService } from "../lib/weeklyPlanService";
 import type { WeeklyPlan } from "../types/weeklyPlan";
 
+// Constants
+const NUM_COUNTERFACTUALS = 6;
+const NUM_QUESTIONS = RECORDING_QUESTIONS.length;
+
 interface MentalModelViewerProps {
   session: RecordingSession;
   onClose: () => void;
@@ -108,8 +112,12 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
       try {
         const questionsWithCf = new Set<number>();
 
-        // Check each question (0-4) for existing counterfactuals
-        for (let questionIndex = 0; questionIndex < 5; questionIndex++) {
+        // Check each question (0-NUM_QUESTIONS-1) for existing counterfactuals
+        for (
+          let questionIndex = 0;
+          questionIndex < NUM_QUESTIONS;
+          questionIndex++
+        ) {
           const recording = session.recordings.find(
             (r) => r.stepNumber === questionIndex
           );
@@ -164,7 +172,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
     loadWeeklyPlan();
   }, [userId, session.completedAt]);
 
-  // Main 5 nodes representing the 5 questions
+  // Main NUM_QUESTIONS nodes representing the NUM_QUESTIONS questions
   const mainNodes: Node[] = [
     {
       id: "center",
@@ -252,9 +260,13 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
 
     const cfNodes: Node[] = [];
     const radius = 15; // Distance from selected node
-    const angleStep = (2 * Math.PI) / 5; // 5 counterfactuals in a circle
 
-    counterfactuals.slice(0, 5).forEach((cf, index) => {
+    // Use the actual number of counterfactuals (up to NUM_COUNTERFACTUALS) for angle calculation
+    const actualCounterfactuals = counterfactuals.slice(0, NUM_COUNTERFACTUALS);
+    const numCfToShow = actualCounterfactuals.length;
+    const angleStep = numCfToShow > 0 ? (2 * Math.PI) / numCfToShow : 0; // Dynamic angle step based on actual count
+
+    actualCounterfactuals.forEach((cf, index) => {
       const angle = index * angleStep - Math.PI / 2; // Start from top
       const cfX = selectedNode.x + radius * Math.cos(angle);
       const cfY = selectedNode.y + radius * Math.sin(angle);
@@ -305,10 +317,10 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
 
     setIsGenerating(true);
     try {
-      // Get transcriptions from session recordings for the 5 questions
+      // Get transcriptions from session recordings for the NUM_QUESTIONS questions
       const questionResponses: string[] = [];
 
-      for (let i = 0; i < 5; i++) {
+      for (let i = 0; i < NUM_QUESTIONS; i++) {
         const recording = session.recordings.find((r) => r.stepNumber === i);
         const transcription = recording?.transcription?.text || "";
         questionResponses.push(transcription);
@@ -324,7 +336,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
 
       if (!hasTranscriptions) {
         toast.error(
-          "No transcriptions available. Please ensure all 5 questions have been recorded and transcribed before generating counterfactuals."
+          `No transcriptions available. Please ensure all ${NUM_QUESTIONS} questions have been recorded and transcribed before generating counterfactuals.`
         );
         setIsGenerating(false);
         return;
@@ -418,10 +430,10 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
       }
 
       if (result.success && result.counterfactuals.length > 0) {
-        // Show all 5 counterfactuals around the selected question
+        // Show all NUM_COUNTERFACTUALS counterfactuals around the selected question
         const allCounterfactuals = result.counterfactuals
           .map((cf) => cf.counterfactualText)
-          .slice(0, 5);
+          .slice(0, NUM_COUNTERFACTUALS);
 
         console.log("Setting counterfactuals:", allCounterfactuals);
         setCounterfactuals(allCounterfactuals);
@@ -460,7 +472,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
       console.error("Error generating counterfactuals:", error);
       toast.error("Error generating counterfactuals. Please try again.");
     } finally {
-    setIsGenerating(false);
+      setIsGenerating(false);
     }
   };
 
