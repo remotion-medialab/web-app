@@ -138,8 +138,8 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
               setSelectedCounterfactual({
                 index: existingData.selectedAlternative.index,
                 text: existingData.selectedAlternative.text,
-                feasibilityRating:
-                  existingData.selectedAlternative.feasibilityRating,
+                feasibilityRating: (existingData.selectedAlternative as any)
+                  .feasibilityRating,
               });
             } else {
               setSelectedCounterfactual(null);
@@ -806,27 +806,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
           <p className="text-sm" style={{ color: "#b0b0b0" }}>
             Interactive mind map - Click circles to select questions
           </p>
-          {selectedQuestionIndex !== undefined && (
-            <p
-              className="text-sm mt-1 font-medium"
-              style={{ color: "#3B82F6" }}
-            >
-              Selected: {RECORDING_QUESTIONS[selectedQuestionIndex]}
-            </p>
-          )}
-          {/* Debug info */}
-          {selectedCounterfactual && (
-            <p className="text-xs mt-1" style={{ color: "#059669" }}>
-              Debug: Alternative{" "}
-              {String.fromCharCode(65 + selectedCounterfactual.index)} selected
-            </p>
-          )}
-          {questionsWithCounterfactuals.size > 0 && !showCounterfactuals && (
-            <p className="text-xs mt-1" style={{ color: "#3B82F6" }}>
-              Debug: Questions with counterfactuals:{" "}
-              {Array.from(questionsWithCounterfactuals).join(", ")}
-            </p>
-          )}
+          {/* Selected and debug info hidden */}
         </div>
         <button
           onClick={onClose}
