@@ -202,7 +202,7 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
             <div
               key={recording.id}
               className={`space-y-3 cursor-pointer transition-colors ${
-                selectedRecording?.id === recording.id
+                selectedQuestionIndex === recording.stepNumber
                   ? "bg-blue-100 border-2 border-blue-300"
                   : "hover:bg-blue-50"
               }`}

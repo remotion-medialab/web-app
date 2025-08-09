@@ -425,6 +425,7 @@ const OverviewPage: React.FC = () => {
               }}
               selectedQuestionIndex={selectedQuestionIndex}
               onQuestionSelect={setSelectedQuestionIndex}
+              onRecordingSelect={setSelectedRecording}
             />
           </div>
         )}
