@@ -49,7 +49,7 @@ const OverviewPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   // Auth and recordings data
-  const { userId, loading: authLoading } = useAuth();
+  const { userId, loading: authLoading, logout } = useAuth();
   const {
     sessionsByDay,
     loading: recordingsLoading,
@@ -229,8 +229,8 @@ const OverviewPage: React.FC = () => {
               </p>
             </div>
 
-            {/* navigation arrows */}
-            <div className="flex gap-2">
+            {/* navigation arrows + logout */}
+            <div className="flex gap-2 items-center">
               <button
                 onClick={() => setWeekOffset(weekOffset - 1)}
                 className="px-2 text-lg"
@@ -242,6 +242,15 @@ const OverviewPage: React.FC = () => {
                 className="px-2 text-lg"
               >
                 &gt;
+              </button>
+              <span className="mx-2 text-gray-300">|</span>
+              <button
+                onClick={logout}
+                className="px-3 py-1 text-sm border rounded hover:bg-gray-100"
+                title="Sign out"
+                style={{ borderColor: "#d4d4d4", color: "#545454" }}
+              >
+                Logout
               </button>
             </div>
           </div>

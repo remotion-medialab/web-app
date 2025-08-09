@@ -15,7 +15,8 @@ import { startOfWeek, endOfWeek, format } from 'date-fns';
 import type { WeeklyPlan, WeeklyPlanFormData } from '../types/weeklyPlan';
 
 export class WeeklyPlanService {
-  private static COLLECTION_NAME = 'weeklyPlans';
+  // Move plans under user-scoped path
+  private static ROOT = 'users';
 
   /**
    * Get the week start and end dates for a given date
@@ -64,7 +65,7 @@ export class WeeklyPlanService {
       updatedAt: Timestamp.fromDate(planData.updatedAt)
     };
     
-    const docRef = doc(db, this.COLLECTION_NAME, planId);
+    const docRef = doc(db, this.ROOT, userId, 'weeklyPlans', planId);
     await setDoc(docRef, docData);
     
     console.log('✅ Weekly plan saved to Firestore:', planId);
@@ -78,7 +79,7 @@ export class WeeklyPlanService {
     const { weekStartDate } = this.getWeekBounds(targetDate);
     const planId = `${userId}_${weekStartDate}`;
     
-    const docRef = doc(db, this.COLLECTION_NAME, planId);
+    const docRef = doc(db, this.ROOT, userId, 'weeklyPlans', planId);
     const docSnap = await getDoc(docRef);
     
     if (!docSnap.exists()) {
@@ -98,8 +99,7 @@ export class WeeklyPlanService {
    */
   static async getUserWeeklyPlans(userId: string): Promise<WeeklyPlan[]> {
     const q = query(
-      collection(db, this.COLLECTION_NAME),
-      where('userId', '==', userId),
+      collection(db, this.ROOT, userId, 'weeklyPlans'),
       orderBy('weekStartDate', 'desc')
     );
     
@@ -142,7 +142,7 @@ export class WeeklyPlanService {
       ...new Set([...existingPlan.associatedSessionIds, ...sessionIds])
     ];
 
-    const docRef = doc(db, this.COLLECTION_NAME, planId);
+    const docRef = doc(db, this.ROOT, userId, 'weeklyPlans', planId);
     await setDoc(docRef, {
       ...existingPlan,
       associatedSessionIds: updatedAssociatedSessions,

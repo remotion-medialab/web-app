@@ -1,5 +1,5 @@
 // src/lib/recordingsService.ts
-import { collection, query, orderBy, getDocs, Timestamp } from 'firebase/firestore';
+import { collection, collectionGroup, query, orderBy, getDocs, Timestamp, where, doc } from 'firebase/firestore';
 import { db } from './firebase';
 
 export interface CounterfactualData {
@@ -19,6 +19,7 @@ export interface Recording {
   title: string;
   duration: number;
   stepNumber: number;
+  sessionNumber?: number;
   question?: string;
   createdAt: Date;
   audioUri?: string;
@@ -53,20 +54,81 @@ export class RecordingsService {
     try {
       console.log('🔍 Fetching recordings for user:', userId);
       
-      // Get all recordings for the user, ordered by creation date
-      const recordingsRef = collection(db, 'recordings', userId, 'sessions');
-      
-      // First try without orderBy to see if documents exist
-      let snapshot = await getDocs(recordingsRef);
-      
-      // If documents exist, try with orderBy
-      if (!snapshot.empty) {
+      let snapshot;
+      try {
+        const cg = collectionGroup(db, 'recordings');
+        const q1 = query(cg, where('userId', '==', userId), orderBy('createdAt', 'desc'));
+        snapshot = await getDocs(q1);
+      } catch {
+        // Fallback to legacy path
+        const recordingsRef = collection(db, 'recordings', userId, 'sessions');
         try {
-          const q = query(recordingsRef, orderBy('createdAt', 'desc'));
-          snapshot = await getDocs(q);
-        } catch (orderError) {
-          console.warn('⚠️ OrderBy failed, using unordered results:', orderError);
-          // Keep using the unordered snapshot
+          const q2 = query(recordingsRef, orderBy('createdAt', 'desc'));
+          snapshot = await getDocs(q2);
+        } catch {
+          snapshot = await getDocs(recordingsRef);
+        }
+      }
+
+      if (snapshot.empty) {
+        const sessionsCol = collection(db, 'users', userId, 'sessions');
+        const sessionsSnap = await getDocs(sessionsCol);
+        type Loose = Record<string, unknown>;
+        const allRecordingDocs: Array<{ id: string; data: Loose }> = [];
+        for (const sess of sessionsSnap.docs) {
+          const recordingsCol = collection(doc(db, 'users', userId, 'sessions', sess.id), 'recordings');
+          const recSnap = await getDocs(recordingsCol);
+        recSnap.docs.forEach(d => allRecordingDocs.push({ id: d.id, data: d.data() as Loose }));
+        }
+        const toStringSafe = (v: unknown, fallback = ''): string => typeof v === 'string' ? v : fallback;
+        const toNumberSafe = (v: unknown, fallback = 0): number => typeof v === 'number' ? v : fallback;
+        const toTimestampDate = (v: unknown): Date => v instanceof Timestamp ? v.toDate() : new Date(toStringSafe(v, ''));
+
+        const manualRecordings: Recording[] = allRecordingDocs.map(({ id, data }) => {
+          const transcription = (data.transcription as Loose | undefined);
+          const activitySummary = (data.activitySummary as Loose | undefined);
+          const counterfactuals = (data.counterfactuals as Loose | undefined);
+          const selectedAlt = counterfactuals?.selectedAlternative as Loose | undefined;
+
+          return {
+            id,
+            userId: toStringSafe(data.userId, userId),
+            title: toStringSafe(data.title, 'Untitled Recording'),
+            duration: toNumberSafe(data.duration, 0),
+            stepNumber: toNumberSafe(data.stepNumber, 1),
+            sessionNumber: toNumberSafe(data.sessionNumber, undefined as unknown as number),
+            question: toStringSafe(data.question, undefined as unknown as string),
+            createdAt: data.createdAt instanceof Timestamp ? data.createdAt.toDate() : new Date(toStringSafe(data.createdAt, '')),
+            audioUri: toStringSafe(data.audioUri, undefined as unknown as string),
+            fileUrl: toStringSafe(data.fileUrl, undefined as unknown as string),
+            transcription: transcription ? {
+              text: toStringSafe(transcription.text, ''),
+              confidence: toNumberSafe(transcription.confidence, 0),
+              transcribedAt: toTimestampDate(transcription.transcribedAt),
+              service: toStringSafe(transcription.service, 'unknown'),
+            } : undefined,
+            transcriptionText: toStringSafe(data.transcriptionText, undefined as unknown as string),
+            transcriptionStatus: (toStringSafe(data.transcriptionStatus, 'pending') as 'pending' | 'processing' | 'completed' | 'failed'),
+            activitySummary: activitySummary ? {
+              primaryActivity: toStringSafe(activitySummary.primaryActivity, 'unknown'),
+              confidence: toNumberSafe(activitySummary.confidence, 0),
+            } : undefined,
+            counterfactuals: counterfactuals ? {
+              alternatives: Array.isArray(counterfactuals.alternatives) ? (counterfactuals.alternatives as string[]) : [],
+              selectedAlternative: selectedAlt ? {
+                index: toNumberSafe(selectedAlt.index, 0),
+                text: toStringSafe(selectedAlt.text, ''),
+                selectedAt: toTimestampDate(selectedAlt.selectedAt),
+              } : undefined,
+              generatedAt: toTimestampDate(counterfactuals.generatedAt),
+              questionIndex: toNumberSafe(counterfactuals.questionIndex, 0),
+            } : undefined,
+          };
+        });
+
+        if (manualRecordings.length > 0) {
+          const sessions = this.groupRecordingsBySessionNumber(manualRecordings);
+          return sessions;
         }
       }
       
@@ -83,6 +145,7 @@ export class RecordingsService {
           title: data.title || 'Untitled Recording',
           duration: data.duration || 0,
           stepNumber: data.stepNumber || 1,
+          sessionNumber: data.sessionNumber,
           question: data.question,
           createdAt: data.createdAt instanceof Timestamp 
             ? data.createdAt.toDate() 
@@ -120,8 +183,7 @@ export class RecordingsService {
         };
       });
       
-      // Group recordings into 5-step sessions
-      const sessions = this.groupRecordingsIntoSessions(recordings);
+      const sessions = this.groupRecordingsBySessionNumber(recordings);
       
       return sessions;
       
@@ -134,89 +196,84 @@ export class RecordingsService {
   /**
    * Group recordings into sessions based on proximity and step numbers
    */
-  private static groupRecordingsIntoSessions(recordings: Recording[]): RecordingSession[] {
+  private static groupRecordingsBySessionNumber(recordings: Recording[]): RecordingSession[] {
+    // Separate those with sessionNumber from legacy ones
+    const withSession = recordings.filter(r => typeof r.sessionNumber === 'number') as Required<Recording>[];
+    const legacy = recordings.filter(r => typeof r.sessionNumber !== 'number');
+
+    // Group with sessionNumber
+    const groups = new Map<number, Recording[]>();
+    withSession.forEach(r => {
+      const n = r.sessionNumber as number;
+      const arr = groups.get(n) || [];
+      arr.push(r);
+      groups.set(n, arr);
+    });
+
+    const sessionsFromNumber: RecordingSession[] = Array.from(groups.entries()).map(([n, recs]) => {
+      const sorted = [...recs].sort((a, b) => (a.stepNumber || 0) - (b.stepNumber || 0));
+      const completedAt = new Date(Math.max(...sorted.map(r => r.createdAt.getTime())));
+      const isComplete = sorted.length === 5;
+      return {
+        sessionId: `session${n}`,
+        recordings: sorted,
+        completedAt,
+        isComplete,
+      };
+    });
+
+    // Fallback grouping for legacy (time proximity, 5 per session)
+    const legacySessions = this.groupLegacyRecordings(legacy);
+
+    // Merge and sort by completion time desc
+    const all = [...sessionsFromNumber, ...legacySessions];
+    all.sort((a, b) => b.completedAt.getTime() - a.completedAt.getTime());
+    return all;
+  }
+
+  // Legacy time-based grouping retained for old data without sessionNumber
+  private static groupLegacyRecordings(recordings: Recording[]): RecordingSession[] {
+    if (recordings.length === 0) return [];
     const sessions: RecordingSession[] = [];
-    
-    // Remove duplicate recordings by ID to prevent issues
-    const uniqueRecordings = recordings.reduce((acc, recording) => {
-      const existing = acc.find(r => r.id === recording.id);
-      if (!existing) {
-        acc.push(recording);
-      }
-      return acc;
-    }, [] as Recording[]);
-    
-    // Sort deduplicated recordings by creation date (newest first)
-    const sortedRecordings = [...uniqueRecordings].sort((a, b) => 
-      b.createdAt.getTime() - a.createdAt.getTime()
-    );
-    
-    // Group by time proximity (recordings within 1 hour of each other)
-    let currentSession: Recording[] = [];
-    let lastRecordingTime: Date | null = null;
-    
-    for (const recording of sortedRecordings) {
-      const recordingTime = recording.createdAt;
-      
-      // If this is the first recording or it's within 1 hour of the last one
-      if (!lastRecordingTime || 
-          (lastRecordingTime.getTime() - recordingTime.getTime()) <= 60 * 60 * 1000) {
-        
-        currentSession.push(recording);
-        lastRecordingTime = recordingTime;
-        
-        // If we have 5 recordings, complete this session
-        if (currentSession.length === 5) {
-          sessions.push(this.createSession(currentSession));
-          currentSession = [];
-          lastRecordingTime = null;
-        }
-        
-      } else {
-        // Time gap too large, start new session
-        if (currentSession.length > 0) {
-          sessions.push(this.createSession(currentSession));
-        }
-        currentSession = [recording];
-        lastRecordingTime = recordingTime;
+    const sorted = [...recordings].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    let bucket: Recording[] = [];
+    let counter = 1;
+    for (const r of sorted) {
+      bucket.push(r);
+      if (bucket.length === 5) {
+        const completedAt = new Date(Math.max(...bucket.map(x => x.createdAt.getTime())));
+        sessions.push({
+          sessionId: `legacy-${counter++}`,
+          recordings: [...bucket],
+          completedAt,
+          isComplete: true,
+        });
+        bucket = [];
       }
     }
-    
-    // Add any remaining recordings as a session
-    if (currentSession.length > 0) {
-      sessions.push(this.createSession(currentSession));
+    if (bucket.length > 0) {
+      const completedAt = new Date(Math.max(...bucket.map(x => x.createdAt.getTime())));
+      sessions.push({
+        sessionId: `legacy-${counter++}`,
+        recordings: [...bucket],
+        completedAt,
+        isComplete: bucket.length === 5,
+      });
     }
-    
-    // Remove duplicate sessions if any exist (extra protection)
-    const uniqueSessions = sessions.reduce((acc, session) => {
-      const existing = acc.find(s => s.sessionId === session.sessionId);
-      if (!existing) {
-        acc.push(session);
-      }
-      return acc;
-    }, [] as RecordingSession[]);
-    
-    return uniqueSessions;
+    return sessions;
   }
   
   /**
    * Create a session object from recordings
    */
   private static createSession(recordings: Recording[]): RecordingSession {
-    // Sort recordings by step number for consistent ordering
-    const sortedByStep = [...recordings].sort((a, b) => a.stepNumber - b.stepNumber);
-    
-    // Use the latest recording time as session completion time
+    const sortedByStep = [...recordings].sort((a, b) => (a.stepNumber || 0) - (b.stepNumber || 0));
     const completedAt = new Date(Math.max(...recordings.map(r => r.createdAt.getTime())));
-    
-    // Generate session ID based on completion time and first recording
-    const sessionId = `session_${completedAt.getTime()}_${recordings[0]?.id || 'unknown'}`;
-    
     return {
-      sessionId,
+      sessionId: `session${sortedByStep[0]?.sessionNumber ?? 'unknown'}`,
       recordings: sortedByStep,
       completedAt,
-      isComplete: recordings.length === 5
+      isComplete: recordings.length === 5,
     };
   }
   

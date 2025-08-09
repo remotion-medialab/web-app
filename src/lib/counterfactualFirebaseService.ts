@@ -1,7 +1,31 @@
 // src/lib/counterfactualFirebaseService.ts
-import { doc, updateDoc, getDoc, Timestamp } from 'firebase/firestore';
+import { doc, updateDoc, getDoc, Timestamp, collectionGroup, query, where, getDocs } from 'firebase/firestore';
+import type { DocumentReference, DocumentData } from 'firebase/firestore';
 import { db } from './firebase';
 import type { CounterfactualData } from './recordingsService';
+
+type SelectedAlternativeShape = {
+  index: number;
+  text: string;
+  selectedAt: Timestamp | Date | string;
+};
+
+type CounterfactualsShape = {
+  alternatives: string[];
+  questionIndex: number;
+  generatedAt: Timestamp | Date | string;
+  selectedAlternative?: SelectedAlternativeShape | null;
+};
+
+type RecordingDocData = {
+  counterfactuals?: CounterfactualsShape;
+};
+
+const toDate = (v: unknown): Date => {
+  if (v instanceof Timestamp) return v.toDate();
+  if (v instanceof Date) return v;
+  return new Date(String(v));
+};
 
 export class CounterfactualFirebaseService {
   /**
@@ -16,7 +40,22 @@ export class CounterfactualFirebaseService {
     try {
       console.log('💾 Saving counterfactuals for recording:', recordingId);
       
-      const recordingRef = doc(db, 'recordings', userId, 'sessions', recordingId);
+      // Try new hierarchical structure first (collection group by recordingId)
+      let recordingRef: DocumentReference<DocumentData> | null = null;
+      try {
+        const cg = collectionGroup(db, 'recordings');
+        const q1 = query(cg, where('userId', '==', userId), where('recordingId', '==', recordingId));
+        const snap = await getDocs(q1);
+        if (!snap.empty) {
+          recordingRef = snap.docs[0].ref;
+        }
+      } catch {
+        // ignore
+      }
+      // Fallback to legacy path
+      if (!recordingRef) {
+        recordingRef = doc(db, 'recordings', userId, 'sessions', recordingId);
+      }
       
       const counterfactualData: CounterfactualData = {
         alternatives,
@@ -51,11 +90,24 @@ export class CounterfactualFirebaseService {
     try {
       console.log('💾 Saving selected counterfactual for recording:', recordingId);
       
-      const recordingRef = doc(db, 'recordings', userId, 'sessions', recordingId);
+      let recordingRef: DocumentReference<DocumentData> | null = null;
+      try {
+        const cg = collectionGroup(db, 'recordings');
+        const q1 = query(cg, where('userId', '==', userId), where('recordingId', '==', recordingId));
+        const snap = await getDocs(q1);
+        if (!snap.empty) {
+          recordingRef = snap.docs[0].ref;
+        }
+      } catch {
+        // noop
+      }
+      if (!recordingRef) {
+        recordingRef = doc(db, 'recordings', userId, 'sessions', recordingId);
+      }
       
       // Get current data to preserve existing counterfactuals
       const recordingDoc = await getDoc(recordingRef);
-      const currentData = recordingDoc.data();
+      const currentData = (recordingDoc.data() as RecordingDocData | undefined) || {};
       
       if (!currentData?.counterfactuals) {
         throw new Error('No counterfactuals found for this recording');
@@ -91,11 +143,24 @@ export class CounterfactualFirebaseService {
     try {
       console.log('🗑️ Removing selected counterfactual for recording:', recordingId);
       
-      const recordingRef = doc(db, 'recordings', userId, 'sessions', recordingId);
+      let recordingRef: DocumentReference<DocumentData> | null = null;
+      try {
+        const cg = collectionGroup(db, 'recordings');
+        const q1 = query(cg, where('userId', '==', userId), where('recordingId', '==', recordingId));
+        const snap = await getDocs(q1);
+        if (!snap.empty) {
+          recordingRef = snap.docs[0].ref;
+        }
+      } catch {
+        // noop
+      }
+      if (!recordingRef) {
+        recordingRef = doc(db, 'recordings', userId, 'sessions', recordingId);
+      }
       
       // Get current data to preserve existing counterfactuals
       const recordingDoc = await getDoc(recordingRef);
-      const currentData = recordingDoc.data();
+      const currentData = (recordingDoc.data() as RecordingDocData | undefined) || {};
       
       if (!currentData?.counterfactuals) {
         return; // Nothing to remove
@@ -125,30 +190,44 @@ export class CounterfactualFirebaseService {
     recordingId: string
   ): Promise<CounterfactualData | null> {
     try {
-      const recordingRef = doc(db, 'recordings', userId, 'sessions', recordingId);
+      let recordingRef: DocumentReference<DocumentData> | null = null;
+      try {
+        const cg = collectionGroup(db, 'recordings');
+        const q1 = query(cg, where('userId', '==', userId), where('recordingId', '==', recordingId));
+        const snap = await getDocs(q1);
+        if (!snap.empty) {
+          recordingRef = snap.docs[0].ref;
+        }
+      } catch {
+        // noop
+      }
+      if (!recordingRef) {
+        recordingRef = doc(db, 'recordings', userId, 'sessions', recordingId);
+      }
       const recordingDoc = await getDoc(recordingRef);
       
       if (!recordingDoc.exists()) {
         return null;
       }
 
-      const data = recordingDoc.data();
+      const data = (recordingDoc.data() as RecordingDocData | undefined) || {};
       if (!data.counterfactuals) {
         return null;
       }
 
       // Convert Firestore timestamps back to Date objects
+      const cf = data.counterfactuals!;
       return {
-        ...data.counterfactuals,
-        generatedAt: data.counterfactuals.generatedAt instanceof Timestamp
-          ? data.counterfactuals.generatedAt.toDate()
-          : new Date(data.counterfactuals.generatedAt),
-        selectedAlternative: data.counterfactuals.selectedAlternative ? {
-          ...data.counterfactuals.selectedAlternative,
-          selectedAt: data.counterfactuals.selectedAlternative.selectedAt instanceof Timestamp
-            ? data.counterfactuals.selectedAlternative.selectedAt.toDate()
-            : new Date(data.counterfactuals.selectedAlternative.selectedAt)
-        } : undefined
+        alternatives: cf.alternatives,
+        questionIndex: cf.questionIndex,
+        generatedAt: toDate(cf.generatedAt),
+        selectedAlternative: cf.selectedAlternative
+          ? {
+              index: cf.selectedAlternative.index,
+              text: cf.selectedAlternative.text,
+              selectedAt: toDate(cf.selectedAlternative.selectedAt),
+            }
+          : undefined,
       };
     } catch (error) {
       console.error('❌ Error fetching counterfactuals:', error);
