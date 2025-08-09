@@ -41,6 +41,51 @@ interface Counterfactual {
   createdAt: Date;
 }
 
+// Likert Scale Component
+const LikertScale: React.FC<{
+  rating: number | undefined;
+  onRatingChange: (rating: number) => void;
+  disabled?: boolean;
+}> = ({ rating, onRatingChange, disabled = false }) => {
+  const labels = [
+    "Not feasible at all",
+    "Slightly feasible",
+    "Somewhat feasible",
+    "Very feasible",
+    "Extremely feasible",
+  ];
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm font-medium text-gray-700">
+        How feasible do you think this alternative is?
+      </p>
+      <div className="flex items-center justify-between space-x-2">
+        {[1, 2, 3, 4, 5].map((value) => (
+          <button
+            key={value}
+            onClick={() => !disabled && onRatingChange(value)}
+            disabled={disabled}
+            className={`w-8 h-8 rounded-full transition-all flex items-center justify-center text-xs font-medium ${
+              rating === value
+                ? "bg-blue-500 text-white scale-110"
+                : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+            } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+            title={labels[value - 1]}
+          >
+            {value}
+          </button>
+        ))}
+      </div>
+      {rating && (
+        <p className="text-xs text-gray-500 text-center">
+          {labels[rating - 1]}
+        </p>
+      )}
+    </div>
+  );
+};
+
 const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
   session,
   onClose,
@@ -55,6 +100,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
   const [selectedCounterfactual, setSelectedCounterfactual] = useState<{
     index: number;
     text: string;
+    feasibilityRating?: number;
   } | null>(null);
   const [questionsWithCounterfactuals, setQuestionsWithCounterfactuals] =
     useState<Set<number>>(new Set());
@@ -92,6 +138,8 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
               setSelectedCounterfactual({
                 index: existingData.selectedAlternative.index,
                 text: existingData.selectedAlternative.text,
+                feasibilityRating:
+                  existingData.selectedAlternative.feasibilityRating,
               });
             } else {
               setSelectedCounterfactual(null);
@@ -173,6 +221,41 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
 
     loadWeeklyPlan();
   }, [userId, session.completedAt]);
+
+  const handleFeasibilityRatingChange = async (rating: number) => {
+    if (
+      !userId ||
+      selectedQuestionIndex === undefined ||
+      !selectedCounterfactual
+    )
+      return;
+
+    try {
+      const selectedRecording = session.recordings.find(
+        (r) => r.stepNumber === selectedQuestionIndex
+      );
+
+      if (selectedRecording) {
+        // Update local state
+        setSelectedCounterfactual((prev) =>
+          prev ? { ...prev, feasibilityRating: rating } : null
+        );
+
+        // Save to Firebase
+        await CounterfactualFirebaseService.saveFeasibilityRating(
+          userId,
+          selectedRecording.id,
+          rating
+        );
+
+        console.log("✅ Feasibility rating saved:", rating);
+        toast.success("Feasibility rating saved!");
+      }
+    } catch (error) {
+      console.error("❌ Failed to save feasibility rating:", error);
+      toast.error("Failed to save rating. Please try again.");
+    }
+  };
 
   // Main NUM_QUESTIONS nodes representing the NUM_QUESTIONS questions
   const mainNodes: Node[] = [
@@ -493,7 +576,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
       if (onQuestionSelect) {
         onQuestionSelect(node.questionIndex);
       }
-      
+
       // Also select the corresponding recording to keep the transcript in sync
       if (onRecordingSelect) {
         const correspondingRecording = session.recordings.find(
@@ -564,7 +647,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
       });
     } else if (node.questionIndex !== undefined && onQuestionSelect) {
       onQuestionSelect(node.questionIndex);
-      
+
       // Also select the corresponding recording to keep the transcript in sync
       if (onRecordingSelect) {
         const correspondingRecording = session.recordings.find(
@@ -574,7 +657,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
           onRecordingSelect(correspondingRecording);
         }
       }
-      
+
       // Only clear if switching to a different question
       if (selectedQuestionIndex !== node.questionIndex) {
         setShowCounterfactuals(false); // Reset counterfactuals when switching questions
@@ -862,6 +945,15 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
               {selectedCounterfactual.text}
             </p>
           </div>
+
+          {/* Feasibility Rating */}
+          <div className="mt-4 px-3">
+            <LikertScale
+              rating={selectedCounterfactual.feasibilityRating}
+              onRatingChange={handleFeasibilityRatingChange}
+            />
+          </div>
+
           <div className="mt-3 flex justify-center">
             <button
               onClick={async () => {

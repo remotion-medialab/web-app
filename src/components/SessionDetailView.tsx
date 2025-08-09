@@ -377,6 +377,43 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                       {recordingCounterfactuals[recording.id]
                         ?.selectedAlternative?.text ?? ""}
                     </p>
+
+                    {/* Feasibility Rating Display */}
+                    {recordingCounterfactuals[recording.id]?.selectedAlternative
+                      ?.feasibilityRating && (
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs font-medium text-gray-500">
+                            Feasibility Rating:
+                          </span>
+                          <div className="flex items-center gap-1">
+                            {[1, 2, 3, 4, 5].map((value) => (
+                              <div
+                                key={value}
+                                className={`w-4 h-4 rounded-full flex items-center justify-center text-xs ${
+                                  value <=
+                                  (recordingCounterfactuals[recording.id]
+                                    ?.selectedAlternative?.feasibilityRating ||
+                                    0)
+                                    ? "bg-blue-500 text-white"
+                                    : "bg-gray-200 text-gray-400"
+                                }`}
+                              >
+                                {value}
+                              </div>
+                            ))}
+                          </div>
+                          <span className="text-xs text-gray-500">
+                            (
+                            {
+                              recordingCounterfactuals[recording.id]
+                                ?.selectedAlternative?.feasibilityRating
+                            }
+                            /5)
+                          </span>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

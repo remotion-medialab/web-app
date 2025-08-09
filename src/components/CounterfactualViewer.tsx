@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import type { Counterfactual } from "../lib/counterfactualService";
 import { CounterfactualService } from "../lib/counterfactualService";
 import type { Recording } from "../lib/recordingsService";
 import { RECORDING_QUESTIONS } from "../constants/recordingQuestions";
@@ -21,9 +20,66 @@ interface StepCounterfactuals {
   originalText: string;
   counterfactuals: Counterfactual[];
   selectedCounterfactual?: string;
+  feasibilityRating?: number;
   isLoading: boolean;
   error?: string;
 }
+
+interface Counterfactual {
+  id: string;
+  recordingId: string;
+  stepNumber: number;
+  originalText: string;
+  counterfactualText: string;
+  whichPhase: string;
+  isSelected: boolean;
+  createdAt: Date;
+}
+
+// Likert Scale Component
+const LikertScale: React.FC<{
+  rating: number | undefined;
+  onRatingChange: (rating: number) => void;
+  disabled?: boolean;
+}> = ({ rating, onRatingChange, disabled = false }) => {
+  const labels = [
+    "Not feasible at all",
+    "Slightly feasible",
+    "Somewhat feasible",
+    "Very feasible",
+    "Extremely feasible",
+  ];
+
+  return (
+    <div className="space-y-3">
+      <p className="text-sm font-medium text-blue-900">
+        How feasible do you think this alternative is?
+      </p>
+      <div className="flex items-center justify-between space-x-2">
+        {[1, 2, 3, 4, 5].map((value) => (
+          <button
+            key={value}
+            onClick={() => !disabled && onRatingChange(value)}
+            disabled={disabled}
+            className={`w-8 h-8 rounded-full transition-all flex items-center justify-center text-xs font-medium ${
+              rating === value
+                ? "bg-blue-600 text-white scale-110"
+                : "bg-gray-200 text-gray-600 hover:bg-gray-300"
+            } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+            title={labels[value - 1]}
+          >
+            {value}
+          </button>
+        ))}
+      </div>
+      {rating && (
+        <p className="text-xs text-blue-600 text-center">
+          {labels[rating - 1]}
+        </p>
+      )}
+    </div>
+  );
+};
 
 export const CounterfactualViewer: React.FC<CounterfactualViewerProps> = ({
   recordings,
@@ -46,6 +102,7 @@ export const CounterfactualViewer: React.FC<CounterfactualViewerProps> = ({
       originalText: recordings[index]?.transcription?.text || "",
       counterfactuals: [],
       selectedCounterfactual: undefined,
+      feasibilityRating: undefined,
       isLoading: false,
       error: undefined,
     }));
@@ -107,7 +164,7 @@ export const CounterfactualViewer: React.FC<CounterfactualViewerProps> = ({
           )
         );
       }
-    } catch (error) {
+    } catch {
       setStepData((prev) =>
         prev.map((step) =>
           step.stepNumber === stepNumber
@@ -138,6 +195,24 @@ export const CounterfactualViewer: React.FC<CounterfactualViewerProps> = ({
     if (recording && onCounterfactualSelected) {
       onCounterfactualSelected(recording.id, counterfactualText);
     }
+  };
+
+  const handleFeasibilityRatingChange = (
+    stepNumber: number,
+    rating: number
+  ) => {
+    setStepData((prev) =>
+      prev.map((step) =>
+        step.stepNumber === stepNumber
+          ? { ...step, feasibilityRating: rating }
+          : step
+      )
+    );
+
+    console.log(
+      `✅ Feasibility rating ${rating} saved for step ${stepNumber + 1}`
+    );
+    toast.success("Feasibility rating saved!");
   };
 
   const generateAllCounterfactuals = async () => {
@@ -176,7 +251,7 @@ export const CounterfactualViewer: React.FC<CounterfactualViewerProps> = ({
           }))
         );
       }
-    } catch (error) {
+    } catch {
       setStepData((prev) =>
         prev.map((step) => ({
           ...step,
@@ -329,6 +404,12 @@ export const CounterfactualViewer: React.FC<CounterfactualViewerProps> = ({
               <p className="text-blue-800">
                 {stepData[activeStep].selectedCounterfactual}
               </p>
+              <LikertScale
+                rating={stepData[activeStep].feasibilityRating}
+                onRatingChange={(rating) =>
+                  handleFeasibilityRatingChange(activeStep, rating)
+                }
+              />
             </div>
           )}
         </div>
