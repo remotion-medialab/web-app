@@ -180,3 +180,4 @@ VITE_FIREBASE_APP_ID=your_app_id
 - **Advanced Analytics**: Pattern recognition across sessions
 - **Export Features**: PDF reports and data export
 - **Collaboration**: Share sessions with mentors/therapists
+M

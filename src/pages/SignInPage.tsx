@@ -172,7 +172,7 @@ const SignInPage: React.FC = () => {
               />
             </div>
 
-            <div className="flex space-x-4 mt-8">
+            <div className="flex justify-center space-x-4 mt-8">
               <button
                 type="button"
                 onClick={prevStep}
