@@ -12,9 +12,9 @@ import {
 import { db } from "./firebase";
 
 export interface CounterfactualData {
-  alternatives: string[]; // Array of 5 generated alternatives
+  generatedCfTexts: string[]; // Array of 5 generated counterfactual texts
   selectedAlternative?: {
-    index: number; // 0-4 corresponding to alternatives array
+    index: number; // 0-4 corresponding to generatedCfTexts array
     text: string;
     selectedAt: Date;
   };
@@ -181,8 +181,10 @@ export class RecordingsService {
                 : undefined,
               counterfactuals: counterfactuals
                 ? {
-                    alternatives: Array.isArray(counterfactuals.alternatives)
-                      ? (counterfactuals.alternatives as string[])
+                    generatedCfTexts: Array.isArray(
+                      counterfactuals.generatedCfTexts
+                    )
+                      ? (counterfactuals.generatedCfTexts as string[])
                       : [],
                     selectedAlternative: selectedAlt
                       ? {
@@ -252,7 +254,7 @@ export class RecordingsService {
             : undefined,
           counterfactuals: data.counterfactuals
             ? {
-                alternatives: data.counterfactuals.alternatives || [],
+                generatedCfTexts: data.counterfactuals.generatedCfTexts || [],
                 selectedAlternative: data.counterfactuals.selectedAlternative
                   ? {
                       index:

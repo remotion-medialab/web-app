@@ -11,7 +11,7 @@ type SelectedAlternativeShape = {
 };
 
 type CounterfactualsShape = {
-  alternatives: string[];
+  generatedCfTexts: string[];
   questionIndex: number;
   generatedAt: Timestamp | Date | string;
   selectedAlternative?: SelectedAlternativeShape | null;
@@ -33,7 +33,7 @@ type RecordingDocData = {
   counterfactuals?: CounterfactualsShape;
   counterfactualResults?: CounterfactualsShape;
   // Flattened structure (new)
-  alternatives?: string[];
+  generatedCfTexts?: string[];
   questionIndex?: number;
   generatedAt?: Timestamp | Date | string;
   selectedAlternative?: SelectedAlternativeShape | null;
@@ -70,7 +70,7 @@ export class CounterfactualFirebaseService {
     userId: string,
     recordingId: string,
     questionIndex: number,
-    alternatives: string[],
+    generatedCfTexts: string[],
     sessionId?: string,
     transcribed?: string,
     cfLogs?: {
@@ -89,7 +89,7 @@ export class CounterfactualFirebaseService {
       console.log("💾 Saving counterfactuals for recording:", recordingId);
       console.log("🔐 User ID:", userId);
       console.log("📝 Question Index:", questionIndex);
-      console.log("🔄 Alternatives count:", alternatives.length);
+      console.log("🔄 Generated CF texts count:", generatedCfTexts.length);
       console.log("📁 Session ID:", sessionId);
       console.log("📝 Transcribed text included:", !!transcribed);
       console.log("📊 CF Logs included:", !!cfLogs);
@@ -99,7 +99,7 @@ export class CounterfactualFirebaseService {
       }
 
       const counterfactualData: CounterfactualData = {
-        alternatives,
+        generatedCfTexts,
         questionIndex,
         generatedAt: new Date(),
         transcribed, // Include transcribed text
@@ -148,7 +148,7 @@ export class CounterfactualFirebaseService {
         recordingId,
         sessionId,
         questionIndex,
-        alternativesCount: alternatives.length,
+        alternativesCount: generatedCfTexts.length,
         errorMessage: error instanceof Error ? error.message : String(error),
         errorCode: (error as { code?: string })?.code,
       });
@@ -196,7 +196,7 @@ export class CounterfactualFirebaseService {
       const currentData =
         (counterfactualDoc.data() as RecordingDocData | undefined) || {};
 
-      if (!currentData?.alternatives) {
+      if (!currentData?.generatedCfTexts) {
         console.log("⚠️ No counterfactual data found");
         throw new Error("No counterfactual data found for this recording");
       }
@@ -292,7 +292,7 @@ export class CounterfactualFirebaseService {
   ): Promise<void> {
     try {
       console.log(
-        "🗑️ Removing selected counterfactual for recording:",
+        "��️ Removing selected counterfactual for recording:",
         recordingId
       );
 
@@ -322,7 +322,7 @@ export class CounterfactualFirebaseService {
       const currentData =
         (counterfactualDoc.data() as RecordingDocData | undefined) || {};
 
-      if (!currentData?.alternatives) {
+      if (!currentData?.generatedCfTexts) {
         console.log("⚠️ No counterfactual data found");
         return; // Nothing to remove
       }
@@ -383,10 +383,10 @@ export class CounterfactualFirebaseService {
       // Try flattened structure first, then fallback to old nested structures
       let cf: CounterfactualsShape | null = null;
 
-      if (data.alternatives) {
+      if (data.generatedCfTexts) {
         // New flattened structure
         cf = {
-          alternatives: data.alternatives,
+          generatedCfTexts: data.generatedCfTexts,
           questionIndex: data.questionIndex || 0,
           generatedAt: data.generatedAt || new Date(),
           selectedAlternative: data.selectedAlternative,
@@ -410,7 +410,7 @@ export class CounterfactualFirebaseService {
 
       // Convert Firestore timestamps back to Date objects
       return {
-        alternatives: cf.alternatives,
+        generatedCfTexts: cf.generatedCfTexts,
         questionIndex: cf.questionIndex,
         generatedAt: toDate(cf.generatedAt),
         selectedAlternative: cf.selectedAlternative
@@ -435,7 +435,7 @@ export class CounterfactualFirebaseService {
   static async saveSessionCounterfactuals(
     userId: string,
     sessionRecordings: Array<{ recordingId: string; questionIndex: number }>,
-    allCounterfactuals: string[],
+    generatedCfTexts: string[],
     sessionId?: string,
     transcribed?: string,
     cfLogs?: {
@@ -469,7 +469,7 @@ export class CounterfactualFirebaseService {
             userId,
             recordingId,
             questionIndex,
-            allCounterfactuals,
+            generatedCfTexts,
             sessionId,
             transcribed, // Pass transcribed text to each recording
             cfLogs // Pass cfLogs to each recording

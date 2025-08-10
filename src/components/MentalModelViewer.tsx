@@ -131,7 +131,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
             );
 
             // Load the generated alternatives
-            setCounterfactuals(existingData.alternatives);
+            setCounterfactuals(existingData.generatedCfTexts);
             setShowCounterfactuals(true);
 
             // Load the selected alternative if one exists
@@ -195,7 +195,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
                   recording.id,
                   session.sessionId
                 );
-              if (existingData && existingData.alternatives.length > 0) {
+              if (existingData && existingData.generatedCfTexts.length > 0) {
                 questionsWithCf.add(questionIndex);
               }
             } catch (error) {
@@ -584,7 +584,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
               userId,
               selectedRecording.id,
               selectedQuestionIndex,
-              allCounterfactuals,
+              allCounterfactuals, // This is the generatedCfTexts parameter
               session.sessionId,
               questionResponses[selectedQuestionIndex], // Pass the transcribed text for this question
               data.cfLogs // Pass cfLogs from the API response
