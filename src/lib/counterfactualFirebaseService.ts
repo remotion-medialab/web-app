@@ -7,7 +7,7 @@ type SelectedAlternativeShape = {
   index: number;
   text: string;
   selectedAt: Timestamp | Date | string;
-  feasibilityRating?: number; // 1-5 Likert scale rating
+  feasibilityRating?: number; // 1-5 Likert scale rating for the selected alternative
 };
 
 type CounterfactualsShape = {
@@ -16,6 +16,7 @@ type CounterfactualsShape = {
   generatedAt: Timestamp | Date | string;
   selectedAlternative?: SelectedAlternativeShape | null;
   transcribed?: string; // Original text data sent to the /counterfactual API
+  humanFeasibilityRating?: number[]; // Array of feasibility ratings for each counterfactual (-1 indicates no rating yet)
   cfLogs?: {
     sorted20?: string[];
     feasibilityScore20?: number[];
@@ -38,6 +39,7 @@ type RecordingDocData = {
   generatedAt?: Timestamp | Date | string;
   selectedAlternative?: SelectedAlternativeShape | null;
   transcribed?: string; // Original text data sent to the /counterfactual API
+  humanFeasibilityRating?: number[]; // Array of feasibility ratings for each counterfactual (-1 indicates no rating yet)
   cfLogs?: {
     sorted20?: string[];
     feasibilityScore20?: number[];
@@ -104,6 +106,7 @@ export class CounterfactualFirebaseService {
         generatedAt: new Date(),
         transcribed, // Include transcribed text
         cfLogs, // Include cfLogs in the data
+        humanFeasibilityRating: new Array(generatedCfTexts.length).fill(-1), // Initialize with -1 for each counterfactual
         // selectedAlternative will be added when user selects one
       };
 
@@ -157,7 +160,7 @@ export class CounterfactualFirebaseService {
   }
 
   /**
-   * Save user's selected counterfactual for a specific recording
+   * Save user's alternative for a specific recording
    */
   static async saveSelectedCounterfactual(
     userId: string,
@@ -167,13 +170,10 @@ export class CounterfactualFirebaseService {
     sessionId?: string
   ): Promise<void> {
     try {
-      console.log(
-        "💾 Saving selected counterfactual for recording:",
-        recordingId
-      );
+      console.log("💾 Saving alternative for recording:", recordingId);
 
       if (!userId) {
-        throw new Error("User ID is required to save selected counterfactual");
+        throw new Error("User ID is required to save alternative");
       }
 
       // Use the new hierarchical path: users/{userId}/sessions/{sessionId}/counterfactuals/{recordingId}
@@ -187,7 +187,7 @@ export class CounterfactualFirebaseService {
         recordingId
       );
       console.log(
-        "🔄 Using new hierarchical path for selected counterfactual:",
+        "🔄 Using new hierarchical path for alternative:",
         counterfactualRef.path
       );
 
@@ -212,9 +212,195 @@ export class CounterfactualFirebaseService {
 
       await updateDoc(counterfactualRef, updatedData);
 
-      console.log("✅ Selected counterfactual saved successfully");
+      console.log("✅ Alternative saved successfully");
     } catch (error) {
-      console.error("❌ Error saving selected counterfactual:", error);
+      console.error("❌ Error saving alternative:", error);
+      throw error;
+    }
+  }
+
+  /**
+   * Validate and fix humanFeasibilityRating array integrity
+   */
+  static async validateAndFixHumanFeasibilityRatings(
+    userId: string,
+    recordingId: string,
+    sessionId?: string
+  ): Promise<void> {
+    try {
+      console.log(
+        "🔍 Validating humanFeasibilityRating array integrity for recording:",
+        recordingId
+      );
+
+      const existingData = await this.getCounterfactuals(
+        userId,
+        recordingId,
+        sessionId
+      );
+
+      if (!existingData?.generatedCfTexts) {
+        console.log("⚠️ No counterfactual data found for validation");
+        return;
+      }
+
+      const expectedLength = existingData.generatedCfTexts.length;
+      const currentRatings = existingData.humanFeasibilityRating;
+
+      if (!currentRatings || currentRatings.length !== expectedLength) {
+        console.log("🔄 Fixing humanFeasibilityRating array length mismatch");
+
+        const fixedRatings = new Array(expectedLength).fill(-1);
+
+        // Preserve existing ratings if possible
+        if (currentRatings) {
+          for (
+            let i = 0;
+            i < Math.min(currentRatings.length, expectedLength);
+            i++
+          ) {
+            if (currentRatings[i] >= 1 && currentRatings[i] <= 5) {
+              fixedRatings[i] = currentRatings[i];
+            }
+          }
+        }
+
+        // Save the fixed ratings
+        const counterfactualRef = doc(
+          db,
+          "users",
+          userId,
+          "sessions",
+          sessionId || "default",
+          "counterfactuals",
+          recordingId
+        );
+
+        await updateDoc(counterfactualRef, {
+          humanFeasibilityRating: fixedRatings,
+        });
+
+        console.log("✅ Fixed humanFeasibilityRating array:", fixedRatings);
+      } else {
+        console.log("✅ humanFeasibilityRating array is valid");
+      }
+    } catch (error) {
+      console.error("❌ Error validating humanFeasibilityRating:", error);
+    }
+  }
+
+  /**
+   * Save human feasibility rating for a specific counterfactual index
+   */
+  static async saveHumanFeasibilityRating(
+    userId: string,
+    recordingId: string,
+    counterfactualIndex: number,
+    rating: number,
+    sessionId?: string
+  ): Promise<void> {
+    try {
+      console.log(
+        "💾 Saving human feasibility rating for recording:",
+        recordingId,
+        "Counterfactual index:",
+        counterfactualIndex,
+        "Rating:",
+        rating
+      );
+
+      if (!userId) {
+        throw new Error("User ID is required to save human feasibility rating");
+      }
+
+      if (counterfactualIndex < 0) {
+        throw new Error("Counterfactual index must be non-negative");
+      }
+
+      if (rating < 1 || rating > 5) {
+        throw new Error("Rating must be between 1 and 5");
+      }
+
+      // Use the new hierarchical path: users/{userId}/sessions/{sessionId}/counterfactuals/{recordingId}
+      const counterfactualRef = doc(
+        db,
+        "users",
+        userId,
+        "sessions",
+        sessionId || "default",
+        "counterfactuals",
+        recordingId
+      );
+      console.log(
+        "🔄 Using new hierarchical path for human feasibility rating:",
+        counterfactualRef.path
+      );
+
+      // Get current data to preserve existing counterfactual data
+      const counterfactualDoc = await getDoc(counterfactualRef);
+      const currentData =
+        (counterfactualDoc.data() as RecordingDocData | undefined) || {};
+
+      if (!currentData?.generatedCfTexts) {
+        console.log("⚠️ No counterfactual data found");
+        throw new Error("No counterfactual data found for this recording");
+      }
+
+      if (counterfactualIndex >= currentData.generatedCfTexts.length) {
+        console.log("⚠️ Counterfactual index out of bounds");
+        throw new Error("Counterfactual index out of bounds");
+      }
+
+      // Initialize humanFeasibilityRating array if it doesn't exist or if it has wrong length
+      let currentRatings = currentData.humanFeasibilityRating;
+
+      if (
+        !currentRatings ||
+        currentRatings.length !== currentData.generatedCfTexts.length
+      ) {
+        console.log(
+          "🔄 Initializing/resizing humanFeasibilityRating array to match generatedCfTexts length"
+        );
+        currentRatings = new Array(currentData.generatedCfTexts.length).fill(
+          -1
+        );
+
+        // If we had existing ratings, try to preserve them (up to the new length)
+        if (currentData.humanFeasibilityRating) {
+          for (
+            let i = 0;
+            i <
+            Math.min(
+              currentData.humanFeasibilityRating.length,
+              currentData.generatedCfTexts.length
+            );
+            i++
+          ) {
+            currentRatings[i] = currentData.humanFeasibilityRating[i];
+          }
+        }
+      }
+
+      // Update the specific rating
+      const updatedRatings = [...currentRatings];
+      updatedRatings[counterfactualIndex] = rating;
+
+      console.log("📊 Updated ratings array:", updatedRatings);
+      console.log(
+        "📊 Generated CF texts count:",
+        currentData.generatedCfTexts.length
+      );
+
+      const updatedData = {
+        ...currentData,
+        humanFeasibilityRating: updatedRatings,
+      };
+
+      await updateDoc(counterfactualRef, updatedData);
+
+      console.log("✅ Human feasibility rating saved successfully");
+    } catch (error) {
+      console.error("❌ Error saving human feasibility rating:", error);
       throw error;
     }
   }
@@ -391,6 +577,7 @@ export class CounterfactualFirebaseService {
           generatedAt: data.generatedAt || new Date(),
           selectedAlternative: data.selectedAlternative,
           transcribed: data.transcribed, // Include transcribed in the returned data
+          humanFeasibilityRating: data.humanFeasibilityRating, // Include human feasibility ratings
           cfLogs: data.cfLogs,
         };
       } else if (data.counterfactualResults) {
@@ -418,9 +605,11 @@ export class CounterfactualFirebaseService {
               index: cf.selectedAlternative.index,
               text: cf.selectedAlternative.text,
               selectedAt: toDate(cf.selectedAlternative.selectedAt),
+              feasibilityRating: cf.selectedAlternative.feasibilityRating,
             }
           : undefined,
         transcribed: cf.transcribed, // Include transcribed in the returned data
+        humanFeasibilityRating: cf.humanFeasibilityRating, // Include human feasibility ratings
         cfLogs: cf.cfLogs, // Include cfLogs in the returned data
       };
     } catch (error) {

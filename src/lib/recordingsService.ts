@@ -17,10 +17,12 @@ export interface CounterfactualData {
     index: number; // 0-4 corresponding to generatedCfTexts array
     text: string;
     selectedAt: Date;
+    feasibilityRating?: number; // 1-5 Likert scale rating for the selected alternative
   };
   generatedAt: Date;
   questionIndex: number; // Which question (0-4) this relates to
   transcribed?: string; // Original text data sent to the /counterfactual API
+  humanFeasibilityRating?: number[]; // Array of feasibility ratings for each counterfactual (-1 indicates no rating yet)
   cfLogs?: {
     sorted20?: string[];
     feasibilityScore20?: number[];

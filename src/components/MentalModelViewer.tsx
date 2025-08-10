@@ -55,6 +55,9 @@ const LikertScale: React.FC<{
     "Extremely feasible",
   ];
 
+  // Only show selected state if rating is a valid value (1-5)
+  const isValidRating = rating && rating >= 1 && rating <= 5;
+
   return (
     <div className="space-y-3">
       <p className="text-sm font-medium text-gray-700">
@@ -67,7 +70,7 @@ const LikertScale: React.FC<{
             onClick={() => !disabled && onRatingChange(value)}
             disabled={disabled}
             className={`w-8 h-8 rounded-full transition-all flex items-center justify-center text-xs font-medium ${
-              rating === value
+              isValidRating && rating === value
                 ? "bg-blue-500 text-white scale-110"
                 : "bg-gray-200 text-gray-600 hover:bg-gray-300"
             } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
@@ -77,7 +80,7 @@ const LikertScale: React.FC<{
           </button>
         ))}
       </div>
-      {rating && (
+      {isValidRating && (
         <p className="text-xs text-gray-500 text-center">
           {labels[rating - 1]}
         </p>
@@ -134,16 +137,18 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
             setCounterfactuals(existingData.generatedCfTexts);
             setShowCounterfactuals(true);
 
-            // Load the selected alternative if one exists
+            // Load the saved alternative if one exists
             if (existingData.selectedAlternative) {
+              const feasibilityRating = (
+                existingData.selectedAlternative as {
+                  feasibilityRating?: number;
+                }
+              ).feasibilityRating;
+
               setSelectedCounterfactual({
                 index: existingData.selectedAlternative.index,
                 text: existingData.selectedAlternative.text,
-                feasibilityRating: (
-                  existingData.selectedAlternative as {
-                    feasibilityRating?: number;
-                  }
-                ).feasibilityRating,
+                feasibilityRating: feasibilityRating,
               });
             } else {
               setSelectedCounterfactual(null);
@@ -270,7 +275,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
           prev ? { ...prev, feasibilityRating: rating } : null
         );
 
-        // Save to Firebase
+        // Save to Firebase for the saved alternative
         await CounterfactualFirebaseService.saveFeasibilityRating(
           userId,
           selectedRecording.id,
@@ -278,7 +283,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
           session.sessionId
         );
 
-        console.log("✅ Feasibility rating saved:", rating);
+        console.log("✅ Human feasibility rating saved:", rating);
         toast.success("Feasibility rating saved!");
       }
     } catch (error) {
@@ -644,68 +649,14 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
 
       // The useEffect will automatically load the counterfactuals when selectedQuestionIndex changes
     } else if (node.isCounterfactual && node.text) {
-      // Handle counterfactual node click
+      // Handle counterfactual node click - just update local state
       const cfIndex = parseInt(node.id.split("-")[1]); // Extract index from id like "cf-0"
       console.log("Clicked counterfactual:", cfIndex, node.text);
 
-      setSelectedCounterfactual((prev) => {
-        console.log("Previous selected:", prev);
-
-        if (prev && prev.index === cfIndex) {
-          // If already selected, unselect it
-          console.log("Unselecting:", cfIndex);
-
-          // Remove from Firebase
-          const selectedRecording = session.recordings.find(
-            (r) => r.stepNumber === selectedQuestionIndex
-          );
-          if (selectedRecording && userId) {
-            CounterfactualFirebaseService.removeSelectedCounterfactual(
-              userId,
-              selectedRecording.id,
-              session.sessionId
-            )
-              .then(() => console.log("✅ Selection removed from Firebase"))
-              .catch((error) => {
-                console.error(
-                  "❌ Failed to remove selection from Firebase:",
-                  error
-                );
-                toast.error("Failed to remove selection. Please try again.");
-              });
-          }
-
-          return null;
-        } else {
-          // Select it (this automatically deselects any previous selection)
-          console.log("Selecting:", cfIndex);
-          const newSelection = { index: cfIndex, text: node.text! };
-          console.log("New selected:", newSelection);
-
-          // Save to Firebase
-          const selectedRecording = session.recordings.find(
-            (r) => r.stepNumber === selectedQuestionIndex
-          );
-          if (selectedRecording && userId) {
-            CounterfactualFirebaseService.saveSelectedCounterfactual(
-              userId,
-              selectedRecording.id,
-              cfIndex,
-              node.text!,
-              session.sessionId
-            )
-              .then(() => console.log("✅ Selection saved to Firebase"))
-              .catch((error) => {
-                console.error(
-                  "❌ Failed to save selection to Firebase:",
-                  error
-                );
-                toast.error("Failed to save selection. Please try again.");
-              });
-          }
-
-          return newSelection;
-        }
+      // Update local state to reflect the selected alternative
+      setSelectedCounterfactual({
+        index: cfIndex,
+        text: node.text!,
       });
     } else if (node.questionIndex !== undefined && onQuestionSelect) {
       onQuestionSelect(node.questionIndex);
@@ -995,41 +946,6 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
               onRatingChange={handleFeasibilityRatingChange}
             />
           </div>
-
-          <div className="mt-3 flex justify-center">
-            <button
-              onClick={async () => {
-                if (!userId || selectedQuestionIndex === undefined) return;
-
-                try {
-                  const selectedRecording = session.recordings.find(
-                    (r) => r.stepNumber === selectedQuestionIndex
-                  );
-                  if (selectedRecording) {
-                    await CounterfactualFirebaseService.saveSelectedCounterfactual(
-                      userId,
-                      selectedRecording.id,
-                      selectedCounterfactual.index,
-                      selectedCounterfactual.text,
-                      session.sessionId
-                    );
-                    console.log("✅ Alternative confirmed and saved");
-                    toast.success(
-                      `Alternative ${String.fromCharCode(
-                        65 + selectedCounterfactual.index
-                      )} has been selected and saved!`
-                    );
-                  }
-                } catch (error) {
-                  console.error("❌ Failed to confirm selection:", error);
-                  toast.error("Failed to save selection. Please try again.");
-                }
-              }}
-              className="px-4 py-2 bg-blue-500 text-white rounded-full hover:bg-blue-600 transition-colors text-sm font-medium"
-            >
-              Select This Alternative
-            </button>
-          </div>
         </div>
       )}
 
@@ -1054,7 +970,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
         {showCounterfactuals && counterfactuals.length > 0 && (
           <p className="text-xs" style={{ color: "#3B82F6" }}>
             {counterfactuals.length} alternatives generated around selected
-            question
+            question • Click any alternative to select it
             {selectedCounterfactual &&
               ` • Alternative ${String.fromCharCode(
                 65 + selectedCounterfactual.index
