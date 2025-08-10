@@ -48,7 +48,9 @@ const LikertScale: React.FC<{
   onSave: (rating: number) => void;
   disabled?: boolean;
 }> = ({ rating, onRatingChange, onSave, disabled = false }) => {
-  const [selectedRating, setSelectedRating] = useState<number | undefined>(rating);
+  const [selectedRating, setSelectedRating] = useState<number | undefined>(
+    rating
+  );
   const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
 
   // Update selected rating when prop changes
@@ -66,11 +68,12 @@ const LikertScale: React.FC<{
   ];
 
   // Only show selected state if selectedRating is a valid value (1-5)
-  const isValidRating = selectedRating && selectedRating >= 1 && selectedRating <= 5;
+  const isValidRating =
+    selectedRating && selectedRating >= 1 && selectedRating <= 5;
 
   const handleRatingClick = (value: number) => {
     if (disabled) return;
-    
+
     setSelectedRating(value);
     setHasUnsavedChanges(true);
   };
