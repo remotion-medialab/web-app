@@ -20,6 +20,7 @@ export interface CounterfactualData {
   };
   generatedAt: Date;
   questionIndex: number; // Which question (0-4) this relates to
+  transcribed?: string; // Original text data sent to the /counterfactual API
   cfLogs?: {
     sorted20?: string[];
     feasibilityScore20?: number[];

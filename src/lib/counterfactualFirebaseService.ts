@@ -15,6 +15,7 @@ type CounterfactualsShape = {
   questionIndex: number;
   generatedAt: Timestamp | Date | string;
   selectedAlternative?: SelectedAlternativeShape | null;
+  transcribed?: string; // Original text data sent to the /counterfactual API
   cfLogs?: {
     sorted20?: string[];
     feasibilityScore20?: number[];
@@ -36,6 +37,7 @@ type RecordingDocData = {
   questionIndex?: number;
   generatedAt?: Timestamp | Date | string;
   selectedAlternative?: SelectedAlternativeShape | null;
+  transcribed?: string; // Original text data sent to the /counterfactual API
   cfLogs?: {
     sorted20?: string[];
     feasibilityScore20?: number[];
@@ -70,6 +72,7 @@ export class CounterfactualFirebaseService {
     questionIndex: number,
     alternatives: string[],
     sessionId?: string,
+    transcribed?: string,
     cfLogs?: {
       sorted20?: string[];
       feasibilityScore20?: number[];
@@ -88,6 +91,7 @@ export class CounterfactualFirebaseService {
       console.log("📝 Question Index:", questionIndex);
       console.log("🔄 Alternatives count:", alternatives.length);
       console.log("📁 Session ID:", sessionId);
+      console.log("📝 Transcribed text included:", !!transcribed);
       console.log("📊 CF Logs included:", !!cfLogs);
 
       if (!userId) {
@@ -98,6 +102,7 @@ export class CounterfactualFirebaseService {
         alternatives,
         questionIndex,
         generatedAt: new Date(),
+        transcribed, // Include transcribed text
         cfLogs, // Include cfLogs in the data
         // selectedAlternative will be added when user selects one
       };
@@ -385,6 +390,7 @@ export class CounterfactualFirebaseService {
           questionIndex: data.questionIndex || 0,
           generatedAt: data.generatedAt || new Date(),
           selectedAlternative: data.selectedAlternative,
+          transcribed: data.transcribed, // Include transcribed in the returned data
           cfLogs: data.cfLogs,
         };
       } else if (data.counterfactualResults) {
@@ -414,6 +420,7 @@ export class CounterfactualFirebaseService {
               selectedAt: toDate(cf.selectedAlternative.selectedAt),
             }
           : undefined,
+        transcribed: cf.transcribed, // Include transcribed in the returned data
         cfLogs: cf.cfLogs, // Include cfLogs in the returned data
       };
     } catch (error) {
@@ -430,6 +437,7 @@ export class CounterfactualFirebaseService {
     sessionRecordings: Array<{ recordingId: string; questionIndex: number }>,
     allCounterfactuals: string[],
     sessionId?: string,
+    transcribed?: string,
     cfLogs?: {
       sorted20?: string[];
       feasibilityScore20?: number[];
@@ -449,6 +457,7 @@ export class CounterfactualFirebaseService {
         "recordings"
       );
       console.log("📁 Session ID:", sessionId);
+      console.log("📝 Transcribed text included:", !!transcribed);
       console.log("📊 CF Logs included:", !!cfLogs);
 
       // Save counterfactuals to each recording based on its question index
@@ -462,6 +471,7 @@ export class CounterfactualFirebaseService {
             questionIndex,
             allCounterfactuals,
             sessionId,
+            transcribed, // Pass transcribed text to each recording
             cfLogs // Pass cfLogs to each recording
           );
         }

@@ -586,6 +586,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
               selectedQuestionIndex,
               allCounterfactuals,
               session.sessionId,
+              questionResponses[selectedQuestionIndex], // Pass the transcribed text for this question
               data.cfLogs // Pass cfLogs from the API response
             );
             console.log("✅ Counterfactuals saved to Firebase");
