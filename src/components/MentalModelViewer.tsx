@@ -321,7 +321,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
       type: selectedQuestionIndex === 3 ? "outline-blue" : "light-filled",
       questionIndex: 3,
     },
-        {
+    {
       id: "left",
       x: 25,
       y: 50,
@@ -585,7 +585,8 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
               selectedRecording.id,
               selectedQuestionIndex,
               allCounterfactuals,
-              session.sessionId
+              session.sessionId,
+              data.cfLogs // Pass cfLogs from the API response
             );
             console.log("✅ Counterfactuals saved to Firebase");
 
@@ -627,7 +628,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
 
       // Select the question and load its counterfactuals
       if (onQuestionSelect) {
-        onQuestionSelect(node.questionIndex-1);
+        onQuestionSelect(node.questionIndex - 1);
       }
 
       // Also select the corresponding recording to keep the transcript in sync

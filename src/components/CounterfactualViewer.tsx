@@ -90,6 +90,9 @@ export const CounterfactualViewer: React.FC<CounterfactualViewerProps> = ({
   const [stepData, setStepData] = useState<StepCounterfactuals[]>([]);
   const [activeStep, setActiveStep] = useState<number>(0);
   const [serviceAvailable, setServiceAvailable] = useState<boolean>(true);
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const [cfLogsData, setCfLogsData] = useState<Record<string, any>>({});
+  const [showDebugInfo, setShowDebugInfo] = useState<boolean>(false);
 
   useEffect(() => {
     // Check if counterfactual service is available
@@ -155,6 +158,19 @@ export const CounterfactualViewer: React.FC<CounterfactualViewerProps> = ({
               : step
           )
         );
+
+        // Store cfLogs data if available
+        if (result.cfLogs) {
+          setCfLogsData((prev) => ({
+            ...prev,
+            [`${sessionId}_step_${stepNumber}`]: result.cfLogs,
+          }));
+          console.log(
+            "📊 CF Logs data stored for step:",
+            stepNumber,
+            result.cfLogs
+          );
+        }
       } else {
         setStepData((prev) =>
           prev.map((step) =>
@@ -242,6 +258,15 @@ export const CounterfactualViewer: React.FC<CounterfactualViewerProps> = ({
             isLoading: false,
           }))
         );
+
+        // Store cfLogs data if available
+        if (result.cfLogs) {
+          setCfLogsData((prev) => ({
+            ...prev,
+            [sessionId]: result.cfLogs,
+          }));
+          console.log("📊 CF Logs data stored:", result.cfLogs);
+        }
       } else {
         setStepData((prev) =>
           prev.map((step) => ({
@@ -277,13 +302,21 @@ export const CounterfactualViewer: React.FC<CounterfactualViewerProps> = ({
         <h2 className="text-2xl font-bold text-gray-900">
           What If Alternatives
         </h2>
-        <button
-          onClick={generateAllCounterfactuals}
-          disabled={!serviceAvailable}
-          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
-        >
-          Generate All Alternatives
-        </button>
+        <div className="flex space-x-2">
+          <button
+            onClick={() => setShowDebugInfo(!showDebugInfo)}
+            className="px-3 py-2 bg-gray-500 text-white rounded-lg hover:bg-gray-600 transition-colors text-sm"
+          >
+            {showDebugInfo ? "Hide" : "Show"} Debug Info
+          </button>
+          <button
+            onClick={generateAllCounterfactuals}
+            disabled={!serviceAvailable}
+            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
+          >
+            Generate All Alternatives
+          </button>
+        </div>
       </div>
 
       {/* Step Navigation */}
@@ -307,6 +340,62 @@ export const CounterfactualViewer: React.FC<CounterfactualViewerProps> = ({
           ))}
         </div>
       </div>
+
+      {/* Debug Info Section */}
+      {showDebugInfo && cfLogsData[sessionId] && (
+        <div className="mb-6 p-4 bg-gray-50 rounded-lg border">
+          <h3 className="text-lg font-semibold text-gray-900 mb-3">
+            Debug Information
+          </h3>
+          <div className="space-y-3">
+            <div>
+              <h4 className="font-medium text-gray-700 mb-1">
+                CF Logs Analysis
+              </h4>
+              {(() => {
+                const analysis = CounterfactualService.analyzeCfLogs(
+                  cfLogsData[sessionId]
+                );
+                return (
+                  <div className="text-sm text-gray-600 space-y-1">
+                    <p>Total Generated: {analysis.totalGenerated}</p>
+                    <p>
+                      Average Feasibility Score:{" "}
+                      {analysis.averageFeasibilityScore.toFixed(3)}
+                    </p>
+                    <p>
+                      Average Similarity Score:{" "}
+                      {analysis.averageSimilarityScore.toFixed(3)}
+                    </p>
+                    <p>
+                      Chosen Categories: Similar (
+                      {analysis.chosenCounts.similar}), Neutral (
+                      {analysis.chosenCounts.neutral}), Different (
+                      {analysis.chosenCounts.different})
+                    </p>
+                    <div className="mt-2">
+                      <p className="font-medium">Insights:</p>
+                      <ul className="list-disc list-inside space-y-1">
+                        {analysis.insights.map((insight, index) => (
+                          <li key={index}>{insight}</li>
+                        ))}
+                      </ul>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+            <div>
+              <h4 className="font-medium text-gray-700 mb-1">
+                Raw CF Logs Data
+              </h4>
+              <pre className="text-xs bg-white p-2 rounded border overflow-auto max-h-40">
+                {JSON.stringify(cfLogsData[sessionId], null, 2)}
+              </pre>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Current Step Display */}
       {stepData[activeStep] && (

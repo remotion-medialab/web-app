@@ -15,6 +15,17 @@ type CounterfactualsShape = {
   questionIndex: number;
   generatedAt: Timestamp | Date | string;
   selectedAlternative?: SelectedAlternativeShape | null;
+  cfLogs?: {
+    sorted20?: string[];
+    feasibilityScore20?: number[];
+    similarityScore20?: number[];
+    sorted15?: string[];
+    similarityScore15?: number[];
+    feasibilityScore15?: number[];
+    similar2_chosen?: string[];
+    neutral1_chosen?: string[];
+    different2_chosen?: string[];
+  };
 };
 
 type RecordingDocData = {
@@ -37,7 +48,18 @@ export class CounterfactualFirebaseService {
     recordingId: string,
     questionIndex: number,
     alternatives: string[],
-    sessionId?: string
+    sessionId?: string,
+    cfLogs?: {
+      sorted20?: string[];
+      feasibilityScore20?: number[];
+      similarityScore20?: number[];
+      sorted15?: string[];
+      similarityScore15?: number[];
+      feasibilityScore15?: number[];
+      similar2_chosen?: string[];
+      neutral1_chosen?: string[];
+      different2_chosen?: string[];
+    }
   ): Promise<void> {
     try {
       console.log("💾 Saving counterfactuals for recording:", recordingId);
@@ -45,6 +67,7 @@ export class CounterfactualFirebaseService {
       console.log("📝 Question Index:", questionIndex);
       console.log("🔄 Alternatives count:", alternatives.length);
       console.log("📁 Session ID:", sessionId);
+      console.log("📊 CF Logs included:", !!cfLogs);
 
       if (!userId) {
         throw new Error("User ID is required to save counterfactuals");
@@ -54,6 +77,7 @@ export class CounterfactualFirebaseService {
         alternatives,
         questionIndex,
         generatedAt: new Date(),
+        cfLogs, // Include cfLogs in the data
         // selectedAlternative will be added when user selects one
       };
 
@@ -362,6 +386,7 @@ export class CounterfactualFirebaseService {
               selectedAt: toDate(cf.selectedAlternative.selectedAt),
             }
           : undefined,
+        cfLogs: cf.cfLogs, // Include cfLogs in the returned data
       };
     } catch (error) {
       console.error("❌ Error fetching counterfactuals:", error);
@@ -376,7 +401,18 @@ export class CounterfactualFirebaseService {
     userId: string,
     sessionRecordings: Array<{ recordingId: string; questionIndex: number }>,
     allCounterfactuals: string[],
-    sessionId?: string
+    sessionId?: string,
+    cfLogs?: {
+      sorted20?: string[];
+      feasibilityScore20?: number[];
+      similarityScore20?: number[];
+      sorted15?: string[];
+      similarityScore15?: number[];
+      feasibilityScore15?: number[];
+      similar2_chosen?: string[];
+      neutral1_chosen?: string[];
+      different2_chosen?: string[];
+    }
   ): Promise<void> {
     try {
       console.log(
@@ -385,6 +421,7 @@ export class CounterfactualFirebaseService {
         "recordings"
       );
       console.log("📁 Session ID:", sessionId);
+      console.log("📊 CF Logs included:", !!cfLogs);
 
       // Save counterfactuals to each recording based on its question index
       const savePromises = sessionRecordings.map(
@@ -396,7 +433,8 @@ export class CounterfactualFirebaseService {
             recordingId,
             questionIndex,
             allCounterfactuals,
-            sessionId
+            sessionId,
+            cfLogs // Pass cfLogs to each recording
           );
         }
       );

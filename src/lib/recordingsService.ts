@@ -20,6 +20,17 @@ export interface CounterfactualData {
   };
   generatedAt: Date;
   questionIndex: number; // Which question (0-4) this relates to
+  cfLogs?: {
+    sorted20?: string[];
+    feasibilityScore20?: number[];
+    similarityScore20?: number[];
+    sorted15?: string[];
+    similarityScore15?: number[];
+    feasibilityScore15?: number[];
+    similar2_chosen?: string[];
+    neutral1_chosen?: string[];
+    different2_chosen?: string[];
+  };
 }
 
 export interface Recording {
