@@ -1,10 +1,6 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-<<<<<<< HEAD
 import type { RecordingSession, Recording } from "../lib/recordingsService";
-=======
-import type { RecordingSession } from "../lib/recordingsService";
->>>>>>> 8e31015 (change play button to pause if clicked again)
 import { RECORDING_QUESTIONS } from "../constants/recordingQuestions";
 import { CounterfactualFirebaseService } from "../lib/counterfactualFirebaseService";
 import { useAuth } from "../contexts/AuthContext";
@@ -20,10 +16,7 @@ interface MentalModelViewerProps {
   onClose: () => void;
   selectedQuestionIndex?: number;
   onQuestionSelect?: (index: number) => void;
-<<<<<<< HEAD
   onRecordingSelect?: (recording: Recording) => void;
-=======
->>>>>>> 8e31015 (change play button to pause if clicked again)
 }
 
 interface Node {
@@ -53,10 +46,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
   onClose,
   selectedQuestionIndex,
   onQuestionSelect,
-<<<<<<< HEAD
   onRecordingSelect,
-=======
->>>>>>> 8e31015 (change play button to pause if clicked again)
 }) => {
   const { userId } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -503,7 +493,6 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
       if (onQuestionSelect) {
         onQuestionSelect(node.questionIndex);
       }
-<<<<<<< HEAD
       
       // Also select the corresponding recording to keep the transcript in sync
       if (onRecordingSelect) {
@@ -514,8 +503,6 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
           onRecordingSelect(correspondingRecording);
         }
       }
-=======
->>>>>>> 8e31015 (change play button to pause if clicked again)
 
       // The useEffect will automatically load the counterfactuals when selectedQuestionIndex changes
     } else if (node.isCounterfactual && node.text) {
@@ -577,7 +564,6 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
       });
     } else if (node.questionIndex !== undefined && onQuestionSelect) {
       onQuestionSelect(node.questionIndex);
-<<<<<<< HEAD
       
       // Also select the corresponding recording to keep the transcript in sync
       if (onRecordingSelect) {
@@ -589,8 +575,6 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
         }
       }
       
-=======
->>>>>>> 8e31015 (change play button to pause if clicked again)
       // Only clear if switching to a different question
       if (selectedQuestionIndex !== node.questionIndex) {
         setShowCounterfactuals(false); // Reset counterfactuals when switching questions
