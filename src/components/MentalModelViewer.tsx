@@ -93,7 +93,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
   onQuestionSelect,
   onRecordingSelect,
 }) => {
-  const { userId } = useAuth();
+  const { userId, user } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
   const [counterfactuals, setCounterfactuals] = useState<string[]>([]);
   const [showCounterfactuals, setShowCounterfactuals] = useState(false);
@@ -105,6 +105,22 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
   const [questionsWithCounterfactuals, setQuestionsWithCounterfactuals] =
     useState<Set<number>>(new Set());
   const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlan | null>(null);
+
+  // Debug authentication state
+  useEffect(() => {
+    console.log("🔐 MentalModelViewer Auth Debug:", {
+      userId,
+      user: user
+        ? {
+            uid: user.uid,
+            email: user.email,
+            emailVerified: user.emailVerified,
+            isAnonymous: user.isAnonymous,
+          }
+        : null,
+      sessionRecordingsCount: session.recordings.length,
+    });
+  }, [userId, user, session.recordings.length]);
 
   // Load existing counterfactuals and selections when component mounts or question changes
   useEffect(() => {
@@ -138,8 +154,11 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
               setSelectedCounterfactual({
                 index: existingData.selectedAlternative.index,
                 text: existingData.selectedAlternative.text,
-                feasibilityRating: (existingData.selectedAlternative as any)
-                  .feasibilityRating,
+                feasibilityRating: (
+                  existingData.selectedAlternative as {
+                    feasibilityRating?: number;
+                  }
+                ).feasibilityRating,
               });
             } else {
               setSelectedCounterfactual(null);
@@ -148,6 +167,9 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
         }
       } catch (error) {
         console.error("❌ Failed to load existing counterfactuals:", error);
+        toast.error(
+          "Failed to load counterfactuals. Please refresh and try again."
+        );
       }
     };
 
@@ -190,6 +212,9 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
         );
       } catch (error) {
         console.error("❌ Failed to check existing counterfactuals:", error);
+        toast.error(
+          "Failed to check existing counterfactuals. Please refresh and try again."
+        );
       }
     };
 
@@ -536,6 +561,19 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
             (r) => r.stepNumber === selectedQuestionIndex
           );
 
+          console.log("🔍 Debug info before saving:", {
+            userId,
+            selectedRecording: selectedRecording
+              ? {
+                  id: selectedRecording.id,
+                  stepNumber: selectedRecording.stepNumber,
+                  userId: selectedRecording.userId,
+                }
+              : null,
+            selectedQuestionIndex,
+            counterfactualsCount: allCounterfactuals.length,
+          });
+
           if (selectedRecording && userId) {
             await CounterfactualFirebaseService.saveCounterfactuals(
               userId,
@@ -549,11 +587,20 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
             setQuestionsWithCounterfactuals(
               (prev) => new Set([...prev, selectedQuestionIndex])
             );
+          } else {
+            console.error("❌ Cannot save counterfactuals:", {
+              hasSelectedRecording: !!selectedRecording,
+              hasUserId: !!userId,
+              userId: userId,
+            });
           }
         } catch (error) {
           console.error(
             "❌ Failed to save counterfactuals to Firebase:",
             error
+          );
+          toast.error(
+            "Failed to save counterfactuals. Please check your connection and try again."
           );
         }
       } else {
@@ -610,12 +657,13 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
               selectedRecording.id
             )
               .then(() => console.log("✅ Selection removed from Firebase"))
-              .catch((error) =>
+              .catch((error) => {
                 console.error(
                   "❌ Failed to remove selection from Firebase:",
                   error
-                )
-              );
+                );
+                toast.error("Failed to remove selection. Please try again.");
+              });
           }
 
           return null;
@@ -637,9 +685,13 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
               node.text!
             )
               .then(() => console.log("✅ Selection saved to Firebase"))
-              .catch((error) =>
-                console.error("❌ Failed to save selection to Firebase:", error)
-              );
+              .catch((error) => {
+                console.error(
+                  "❌ Failed to save selection to Firebase:",
+                  error
+                );
+                toast.error("Failed to save selection. Please try again.");
+              });
           }
 
           return newSelection;

@@ -1,15 +1,5 @@
 // src/lib/counterfactualFirebaseService.ts
-import {
-  doc,
-  updateDoc,
-  getDoc,
-  Timestamp,
-  collectionGroup,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
-import type { DocumentReference, DocumentData } from "firebase/firestore";
+import { doc, updateDoc, getDoc, Timestamp, setDoc } from "firebase/firestore";
 import { db } from "./firebase";
 import type { CounterfactualData } from "./recordingsService";
 
@@ -29,6 +19,7 @@ type CounterfactualsShape = {
 
 type RecordingDocData = {
   counterfactuals?: CounterfactualsShape;
+  counterfactualResults?: CounterfactualsShape;
 };
 
 const toDate = (v: unknown): Date => {
@@ -49,26 +40,12 @@ export class CounterfactualFirebaseService {
   ): Promise<void> {
     try {
       console.log("💾 Saving counterfactuals for recording:", recordingId);
+      console.log("🔐 User ID:", userId);
+      console.log("📝 Question Index:", questionIndex);
+      console.log("🔄 Alternatives count:", alternatives.length);
 
-      // Try new hierarchical structure first (collection group by recordingId)
-      let recordingRef: DocumentReference<DocumentData> | null = null;
-      try {
-        const cg = collectionGroup(db, "recordings");
-        const q1 = query(
-          cg,
-          where("userId", "==", userId),
-          where("recordingId", "==", recordingId)
-        );
-        const snap = await getDocs(q1);
-        if (!snap.empty) {
-          recordingRef = snap.docs[0].ref;
-        }
-      } catch {
-        // ignore
-      }
-      // Fallback to legacy path
-      if (!recordingRef) {
-        recordingRef = doc(db, "recordings", userId, "sessions", recordingId);
+      if (!userId) {
+        throw new Error("User ID is required to save counterfactuals");
       }
 
       const counterfactualData: CounterfactualData = {
@@ -78,16 +55,45 @@ export class CounterfactualFirebaseService {
         // selectedAlternative will be added when user selects one
       };
 
-      await updateDoc(recordingRef, {
-        counterfactuals: {
-          ...counterfactualData,
-          generatedAt: Timestamp.fromDate(counterfactualData.generatedAt),
-        },
-      });
+      // Use the simple counterfactuals/{recordingId} path
+      const counterfactualRef = doc(db, "counterfactuals", recordingId);
+      console.log("🔄 Using new path:", counterfactualRef.path);
+
+      // Check if the document exists first
+      const docSnap = await getDoc(counterfactualRef);
+      if (!docSnap.exists()) {
+        console.log("⚠️ Document doesn't exist, creating it...");
+        // Create the document with basic data first
+        await setDoc(counterfactualRef, {
+          userId,
+          recordingId,
+          createdAt: Timestamp.fromDate(new Date()),
+          counterfactualResults: {
+            ...counterfactualData,
+            generatedAt: Timestamp.fromDate(counterfactualData.generatedAt),
+          },
+        });
+      } else {
+        console.log("✅ Document exists, updating counterfactualResults...");
+        await updateDoc(counterfactualRef, {
+          counterfactualResults: {
+            ...counterfactualData,
+            generatedAt: Timestamp.fromDate(counterfactualData.generatedAt),
+          },
+        });
+      }
 
       console.log("✅ Counterfactuals saved successfully");
     } catch (error) {
       console.error("❌ Error saving counterfactuals:", error);
+      console.error("🔍 Error details:", {
+        userId,
+        recordingId,
+        questionIndex,
+        alternativesCount: alternatives.length,
+        errorMessage: error instanceof Error ? error.message : String(error),
+        errorCode: (error as { code?: string })?.code,
+      });
       throw error;
     }
   }
@@ -107,36 +113,29 @@ export class CounterfactualFirebaseService {
         recordingId
       );
 
-      let recordingRef: DocumentReference<DocumentData> | null = null;
-      try {
-        const cg = collectionGroup(db, "recordings");
-        const q1 = query(
-          cg,
-          where("userId", "==", userId),
-          where("recordingId", "==", recordingId)
-        );
-        const snap = await getDocs(q1);
-        if (!snap.empty) {
-          recordingRef = snap.docs[0].ref;
-        }
-      } catch {
-        // noop
-      }
-      if (!recordingRef) {
-        recordingRef = doc(db, "recordings", userId, "sessions", recordingId);
+      if (!userId) {
+        throw new Error("User ID is required to save selected counterfactual");
       }
 
-      // Get current data to preserve existing counterfactuals
-      const recordingDoc = await getDoc(recordingRef);
+      // Use the simple counterfactuals/{recordingId} path
+      const counterfactualRef = doc(db, "counterfactuals", recordingId);
+      console.log(
+        "🔄 Using new path for selected counterfactual:",
+        counterfactualRef.path
+      );
+
+      // Get current data to preserve existing counterfactualResults
+      const counterfactualDoc = await getDoc(counterfactualRef);
       const currentData =
-        (recordingDoc.data() as RecordingDocData | undefined) || {};
+        (counterfactualDoc.data() as RecordingDocData | undefined) || {};
 
-      if (!currentData?.counterfactuals) {
-        throw new Error("No counterfactuals found for this recording");
+      if (!currentData?.counterfactualResults) {
+        console.log("⚠️ No counterfactualResults found");
+        throw new Error("No counterfactualResults found for this recording");
       }
 
-      const updatedCounterfactuals = {
-        ...currentData.counterfactuals,
+      const updatedCounterfactualResults = {
+        ...currentData.counterfactualResults,
         selectedAlternative: {
           index: alternativeIndex,
           text: alternativeText,
@@ -144,8 +143,8 @@ export class CounterfactualFirebaseService {
         },
       };
 
-      await updateDoc(recordingRef, {
-        counterfactuals: updatedCounterfactuals,
+      await updateDoc(counterfactualRef, {
+        counterfactualResults: updatedCounterfactualResults,
       });
 
       console.log("✅ Selected counterfactual saved successfully");
@@ -171,44 +170,37 @@ export class CounterfactualFirebaseService {
         rating
       );
 
-      let recordingRef: DocumentReference<DocumentData> | null = null;
-      try {
-        const cg = collectionGroup(db, "recordings");
-        const q1 = query(
-          cg,
-          where("userId", "==", userId),
-          where("recordingId", "==", recordingId)
-        );
-        const snap = await getDocs(q1);
-        if (!snap.empty) {
-          recordingRef = snap.docs[0].ref;
-        }
-      } catch {
-        // noop
-      }
-      if (!recordingRef) {
-        recordingRef = doc(db, "recordings", userId, "sessions", recordingId);
+      if (!userId) {
+        throw new Error("User ID is required to save feasibility rating");
       }
 
-      // Get current data to preserve existing counterfactuals
-      const recordingDoc = await getDoc(recordingRef);
+      // Use the simple counterfactuals/{recordingId} path
+      const counterfactualRef = doc(db, "counterfactuals", recordingId);
+      console.log(
+        "🔄 Using new path for feasibility rating:",
+        counterfactualRef.path
+      );
+
+      // Get current data to preserve existing counterfactualResults
+      const counterfactualDoc = await getDoc(counterfactualRef);
       const currentData =
-        (recordingDoc.data() as RecordingDocData | undefined) || {};
+        (counterfactualDoc.data() as RecordingDocData | undefined) || {};
 
-      if (!currentData?.counterfactuals?.selectedAlternative) {
+      if (!currentData?.counterfactualResults?.selectedAlternative) {
+        console.log("⚠️ No selected counterfactual found");
         throw new Error("No selected counterfactual found for this recording");
       }
 
-      const updatedCounterfactuals = {
-        ...currentData.counterfactuals,
+      const updatedCounterfactualResults = {
+        ...currentData.counterfactualResults,
         selectedAlternative: {
-          ...currentData.counterfactuals.selectedAlternative,
+          ...currentData.counterfactualResults.selectedAlternative,
           feasibilityRating: rating,
         },
       };
 
-      await updateDoc(recordingRef, {
-        counterfactuals: updatedCounterfactuals,
+      await updateDoc(counterfactualRef, {
+        counterfactualResults: updatedCounterfactualResults,
       });
 
       console.log("✅ Feasibility rating saved successfully");
@@ -231,41 +223,36 @@ export class CounterfactualFirebaseService {
         recordingId
       );
 
-      let recordingRef: DocumentReference<DocumentData> | null = null;
-      try {
-        const cg = collectionGroup(db, "recordings");
-        const q1 = query(
-          cg,
-          where("userId", "==", userId),
-          where("recordingId", "==", recordingId)
+      if (!userId) {
+        throw new Error(
+          "User ID is required to remove selected counterfactual"
         );
-        const snap = await getDocs(q1);
-        if (!snap.empty) {
-          recordingRef = snap.docs[0].ref;
-        }
-      } catch {
-        // noop
-      }
-      if (!recordingRef) {
-        recordingRef = doc(db, "recordings", userId, "sessions", recordingId);
       }
 
-      // Get current data to preserve existing counterfactuals
-      const recordingDoc = await getDoc(recordingRef);
+      // Use the simple counterfactuals/{recordingId} path
+      const counterfactualRef = doc(db, "counterfactuals", recordingId);
+      console.log(
+        "🔄 Using new path for removing counterfactual:",
+        counterfactualRef.path
+      );
+
+      // Get current data to preserve existing counterfactualResults
+      const counterfactualDoc = await getDoc(counterfactualRef);
       const currentData =
-        (recordingDoc.data() as RecordingDocData | undefined) || {};
+        (counterfactualDoc.data() as RecordingDocData | undefined) || {};
 
-      if (!currentData?.counterfactuals) {
+      if (!currentData?.counterfactualResults) {
+        console.log("⚠️ No counterfactualResults found");
         return; // Nothing to remove
       }
 
-      const updatedCounterfactuals = {
-        ...currentData.counterfactuals,
+      const updatedCounterfactualResults = {
+        ...currentData.counterfactualResults,
         selectedAlternative: null, // Remove the selection
       };
 
-      await updateDoc(recordingRef, {
-        counterfactuals: updatedCounterfactuals,
+      await updateDoc(counterfactualRef, {
+        counterfactualResults: updatedCounterfactualResults,
       });
 
       console.log("✅ Selected counterfactual removed successfully");
@@ -283,37 +270,39 @@ export class CounterfactualFirebaseService {
     recordingId: string
   ): Promise<CounterfactualData | null> {
     try {
-      let recordingRef: DocumentReference<DocumentData> | null = null;
-      try {
-        const cg = collectionGroup(db, "recordings");
-        const q1 = query(
-          cg,
-          where("userId", "==", userId),
-          where("recordingId", "==", recordingId)
-        );
-        const snap = await getDocs(q1);
-        if (!snap.empty) {
-          recordingRef = snap.docs[0].ref;
-        }
-      } catch {
-        // noop
-      }
-      if (!recordingRef) {
-        recordingRef = doc(db, "recordings", userId, "sessions", recordingId);
-      }
-      const recordingDoc = await getDoc(recordingRef);
-
-      if (!recordingDoc.exists()) {
+      if (!userId) {
+        console.log("⚠️ No user ID provided for getting counterfactuals");
         return null;
       }
 
-      const data = (recordingDoc.data() as RecordingDocData | undefined) || {};
-      if (!data.counterfactuals) {
+      // Use the simple counterfactuals/{recordingId} path
+      const counterfactualRef = doc(db, "counterfactuals", recordingId);
+      console.log(
+        "🔍 Using new path for getting counterfactuals:",
+        counterfactualRef.path
+      );
+
+      const counterfactualDoc = await getDoc(counterfactualRef);
+
+      if (!counterfactualDoc.exists()) {
+        console.log("⚠️ Document doesn't exist");
         return null;
       }
+
+      const data =
+        (counterfactualDoc.data() as RecordingDocData | undefined) || {};
+
+      // Try counterfactualResults first, then fallback to counterfactuals
+      const cf = data.counterfactualResults || data.counterfactuals;
+
+      if (!cf) {
+        console.log("⚠️ No counterfactualResults or counterfactuals found");
+        return null;
+      }
+
+      console.log("✅ Found counterfactuals");
 
       // Convert Firestore timestamps back to Date objects
-      const cf = data.counterfactuals!;
       return {
         alternatives: cf.alternatives,
         questionIndex: cf.questionIndex,
@@ -328,7 +317,7 @@ export class CounterfactualFirebaseService {
       };
     } catch (error) {
       console.error("❌ Error fetching counterfactuals:", error);
-      return null;
+      throw error;
     }
   }
 
