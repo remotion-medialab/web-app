@@ -236,9 +236,9 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
       try {
         const questionsWithCf = new Set<number>();
 
-        // Check each question (0-NUM_QUESTIONS-1) for existing counterfactuals
+        // Check each question (1-NUM_QUESTIONS-1) for existing counterfactuals (excluding question 0 - situation description)
         for (
-          let questionIndex = 0;
+          let questionIndex = 1;
           questionIndex < NUM_QUESTIONS;
           questionIndex++
         ) {
@@ -400,36 +400,36 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
   ];
 
   // Generate indicator nodes for questions that have existing counterfactuals
-  const generateIndicatorNodes = (): Node[] => {
-    const indicatorNodes: Node[] = [];
+  // const generateIndicatorNodes = (): Node[] => {
+  //   const indicatorNodes: Node[] = [];
 
-    questionsWithCounterfactuals.forEach((questionIndex) => {
-      // Skip if this question is currently selected and expanded
-      if (selectedQuestionIndex === questionIndex && showCounterfactuals)
-        return;
+  //   questionsWithCounterfactuals.forEach((questionIndex) => {
+  //     // Skip if this question is currently selected and expanded
+  //     if (selectedQuestionIndex === questionIndex && showCounterfactuals)
+  //       return;
 
-      const questionNode = mainNodes.find(
-        (n) => n.questionIndex === questionIndex
-      );
-      if (!questionNode) return;
+  //     const questionNode = mainNodes.find(
+  //       (n) => n.questionIndex === questionIndex
+  //     );
+  //     if (!questionNode) return;
 
-      // Position indicator vertically above the main node
-      const indicatorX = questionNode.x; // Same horizontal position
-      const indicatorY = questionNode.y - 12; // 12% offset up
+  //     // Position indicator vertically above the main node
+  //     const indicatorX = questionNode.x; // Same horizontal position
+  //     const indicatorY = questionNode.y - 12; // 12% offset up
 
-      indicatorNodes.push({
-        id: `indicator-${questionIndex}`,
-        x: Math.max(5, Math.min(95, indicatorX)),
-        y: Math.max(5, Math.min(95, indicatorY)),
-        size: "extra-small",
-        type: "indicator",
-        questionIndex,
-        text: `Alternatives available`,
-      });
-    });
+  //     indicatorNodes.push({
+  //       id: `indicator-${questionIndex}`,
+  //       x: Math.max(5, Math.min(95, indicatorX)),
+  //       y: Math.max(5, Math.min(95, indicatorY)),
+  //       size: "extra-small",
+  //       type: "indicator",
+  //       questionIndex,
+  //       text: `Alternatives available`,
+  //     });
+  //   });
 
-    return indicatorNodes;
-  };
+  //   return indicatorNodes;
+  // };
 
   // Generate counterfactual nodes around selected circle
   const generateCounterfactualNodes = (selectedNode: Node): Node[] => {
@@ -477,8 +477,8 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
     const cfNodes = selectedNode
       ? generateCounterfactualNodes(selectedNode)
       : [];
-    const indicatorNodes = generateIndicatorNodes();
-    return [...mainNodes, ...indicatorNodes, ...cfNodes];
+    // const indicatorNodes = generateIndicatorNodes();
+    return [...mainNodes, /* ...indicatorNodes, */ ...cfNodes];
   };
 
   const connections = [
@@ -685,6 +685,181 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
     } catch (error) {
       console.error("Error generating counterfactuals:", error);
       toast.error("Error generating counterfactuals. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
+
+  const handleGenerateAllMissingAlternatives = async () => {
+    if (!userId) {
+      toast.error("Please sign in to generate alternatives!");
+      return;
+    }
+
+    // Find questions that don't have counterfactuals (excluding question 0 - situation description)
+    const questionsWithoutCounterfactuals: number[] = [];
+    for (let i = 0; i < NUM_QUESTIONS; i++) {
+      if (i !== 0 && !questionsWithCounterfactuals.has(i)) {
+        questionsWithoutCounterfactuals.push(i);
+      }
+    }
+
+    if (questionsWithoutCounterfactuals.length === 0) {
+      toast.success("All questions already have alternatives generated!");
+      return;
+    }
+
+    setIsGenerating(true);
+    let successCount = 0;
+    let errorCount = 0;
+
+    try {
+      // Get all transcriptions first
+      const questionResponses: string[] = [];
+      for (let i = 0; i < NUM_QUESTIONS; i++) {
+        const recording = session.recordings.find((r) => r.stepNumber === i);
+        const transcription = recording?.transcription?.text || "";
+        questionResponses.push(transcription);
+      }
+
+      // Check if we have any actual transcriptions
+      const hasTranscriptions = questionResponses.some(
+        (response) => response.trim().length > 0
+      );
+
+      if (!hasTranscriptions) {
+        toast.error(
+          `No transcriptions available. Please ensure all ${NUM_QUESTIONS} questions have been recorded and transcribed before generating counterfactuals.`
+        );
+        setIsGenerating(false);
+        return;
+      }
+
+      // Generate counterfactuals for each missing question
+      for (const questionIndex of questionsWithoutCounterfactuals) {
+        try {
+          console.log(
+            `Generating alternatives for question ${questionIndex}...`
+          );
+
+          const requestData = {
+            text: questionResponses.join("\n"),
+            metadata: {
+              sessionId: session.sessionId,
+              userId: userId,
+              questions: questionResponses.map((response, index) => ({
+                stepNumber: index,
+                question: RECORDING_QUESTIONS[index],
+                transcription: response,
+                recordingId: session.recordings.find(
+                  (r) => r.stepNumber === index
+                )?.id,
+              })),
+              weeklyPlan: weeklyPlan
+                ? {
+                    idealWeek: weeklyPlan.responses.idealWeek,
+                    obstacles: weeklyPlan.responses.obstacles,
+                    preventActions: weeklyPlan.responses.preventActions,
+                    actionDetails: weeklyPlan.responses.actionDetails,
+                    ifThenPlans: weeklyPlan.responses.ifThenPlans,
+                    weekStartDate: weeklyPlan.weekStartDate,
+                    weekEndDate: weeklyPlan.weekEndDate,
+                  }
+                : null,
+              selectedQuestionIndex: questionIndex,
+              timestamp: new Date().toISOString(),
+            },
+          };
+
+          const API_BASE_URL =
+            import.meta.env.VITE_COUNTERFACTUAL_API_URL ||
+            (import.meta.env.DEV
+              ? "http://localhost:8000"
+              : "https://coping-counterfactual.fly.dev");
+
+          const response = await fetch(`${API_BASE_URL}/counterfactual`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(requestData),
+          });
+
+          if (!response.ok) {
+            throw new Error(`API request failed: ${response.statusText}`);
+          }
+
+          const data = await response.json();
+
+          if (data.counterfactuals && data.counterfactuals.length > 0) {
+            const allCounterfactuals = data.counterfactuals
+              .map((cf: string) => cf)
+              .slice(0, NUM_COUNTERFACTUALS);
+
+            // Save to Firebase
+            const selectedRecording = session.recordings.find(
+              (r) => r.stepNumber === questionIndex
+            );
+
+            if (selectedRecording && userId) {
+              await CounterfactualFirebaseService.saveCounterfactuals(
+                userId,
+                selectedRecording.id,
+                questionIndex,
+                allCounterfactuals,
+                session.sessionId,
+                questionResponses[questionIndex],
+                data.cfLogs
+              );
+              successCount++;
+              console.log(
+                `✅ Generated alternatives for question ${questionIndex}`
+              );
+            }
+          }
+        } catch (error) {
+          console.error(
+            `❌ Failed to generate alternatives for question ${questionIndex}:`,
+            error
+          );
+          errorCount++;
+        }
+      }
+
+      // Update the questions with counterfactuals state
+      if (successCount > 0) {
+        setQuestionsWithCounterfactuals(
+          (prev) =>
+            new Set([
+              ...prev,
+              ...questionsWithoutCounterfactuals.slice(0, successCount),
+            ])
+        );
+      }
+
+      // Show results
+      if (successCount > 0 && errorCount === 0) {
+        toast.success(
+          `Successfully generated alternatives for ${successCount} question${
+            successCount > 1 ? "s" : ""
+          }! (Situation description excluded)`
+        );
+      } else if (successCount > 0 && errorCount > 0) {
+        toast.success(
+          `Generated alternatives for ${successCount} question${
+            successCount > 1 ? "s" : ""
+          }, ${errorCount} failed. (Situation description excluded)`
+        );
+      } else if (errorCount > 0) {
+        toast.error(
+          `Failed to generate alternatives for ${errorCount} question${
+            errorCount > 1 ? "s" : ""
+          }.`
+        );
+      }
+    } catch (error) {
+      console.error("Error in bulk generation:", error);
+      toast.error("Error generating alternatives. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -904,42 +1079,42 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
   };
 
   // Generate connection lines from main nodes to their indicator nodes
-  const getIndicatorConnections = () => {
-    const indicatorConnections: Array<{
-      from: string;
-      to: string;
-      fromNode: Node;
-      toNode: Node;
-    }> = [];
+  // const getIndicatorConnections = () => {
+  //   const indicatorConnections: Array<{
+  //     from: string;
+  //     to: string;
+  //     fromNode: Node;
+  //     toNode: Node;
+  //   }> = [];
 
-    questionsWithCounterfactuals.forEach((questionIndex) => {
-      // Skip if this question is currently expanded
-      if (selectedQuestionIndex === questionIndex && showCounterfactuals)
-        return;
+  //   questionsWithCounterfactuals.forEach((questionIndex) => {
+  //     // Skip if this question is currently expanded
+  //     if (selectedQuestionIndex === questionIndex && showCounterfactuals)
+  //       return;
 
-      const questionNode = mainNodes.find(
-        (n) => n.questionIndex === questionIndex
-      );
-      const indicatorNode = allNodes.find(
-        (n) => n.id === `indicator-${questionIndex}`
-      );
+  //     const questionNode = mainNodes.find(
+  //       (n) => n.questionIndex === questionIndex
+  //     );
+  //     const indicatorNode = allNodes.find(
+  //       (n) => n.id === `indicator-${questionIndex}`
+  //     );
 
-      if (questionNode && indicatorNode) {
-        indicatorConnections.push({
-          from: questionNode.id,
-          to: indicatorNode.id,
-          fromNode: questionNode,
-          toNode: indicatorNode,
-        });
-      }
-    });
+  //     if (questionNode && indicatorNode) {
+  //       indicatorConnections.push({
+  //         from: questionNode.id,
+  //         to: indicatorNode.id,
+  //         fromNode: questionNode,
+  //         toNode: indicatorNode,
+  //       });
+  //     }
+  //   });
 
-    return indicatorConnections;
-  };
+  //   return indicatorConnections;
+  // };
 
   const allNodes = getAllNodes();
   const counterfactualConnections = getCounterfactualConnections();
-  const indicatorConnections = getIndicatorConnections();
+  // const indicatorConnections = getIndicatorConnections();
 
   return (
     <div className="w-full h-full bg-white border rounded-lg flex flex-col">
@@ -1000,7 +1175,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
               );
             })}
             {/* Indicator connection lines */}
-            {indicatorConnections.map((connection, idx) => {
+            {/* {indicatorConnections.map((connection, idx) => {
               return (
                 <line
                   key={`indicator-line-${idx}`}
@@ -1012,7 +1187,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
                   strokeWidth="2"
                 />
               );
-            })}
+            })} */}
           </svg>
 
           {/* Nodes */}
@@ -1083,30 +1258,70 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
         </div>
       )}
 
-      {/* Footer with Generate Button */}
-      <div className="p-6 border-t flex flex-col items-center space-y-2">
-        <button
-          onClick={handleGenerateAlternatives}
-          disabled={
-            isGenerating ||
-            selectedQuestionIndex === undefined ||
-            (showCounterfactuals && counterfactuals.length > 0)
-          }
-          className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-300 rounded-full hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          style={{ color: "#545454" }}
-        >
-          <span className="text-lg">✨</span>
-          {isGenerating
-            ? "Generating..."
-            : showCounterfactuals && counterfactuals.length > 0
-            ? "Alternatives already generated"
-            : 'Generate "What if..." alternatives'}
-        </button>
-        {selectedQuestionIndex === undefined && (
-          <p className="text-xs" style={{ color: "#b0b0b0" }}>
-            Select a question circle to generate alternatives
-          </p>
-        )}
+      {/* Footer with Generate Buttons */}
+      <div className="p-6 border-t flex flex-col items-center space-y-3">
+        <div className="flex flex-col items-center space-y-2">
+          <button
+            onClick={handleGenerateAlternatives}
+            disabled={
+              isGenerating ||
+              selectedQuestionIndex === undefined ||
+              selectedQuestionIndex === 0 ||
+              (showCounterfactuals && counterfactuals.length > 0)
+            }
+            className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-300 rounded-full hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            style={{ color: "#545454" }}
+          >
+            <span className="text-lg">✨</span>
+            {isGenerating
+              ? "Generating..."
+              : selectedQuestionIndex === 0
+              ? "Not available for situation description"
+              : showCounterfactuals && counterfactuals.length > 0
+              ? "Alternatives already generated"
+              : 'Generate "What if..." alternatives'}
+          </button>
+          {selectedQuestionIndex === undefined && (
+            <p className="text-xs" style={{ color: "#b0b0b0" }}>
+              Select a question circle to generate alternatives
+            </p>
+          )}
+          {selectedQuestionIndex === 0 && (
+            <p className="text-xs" style={{ color: "#b0b0b0" }}>
+              Situation description cannot generate alternatives
+            </p>
+          )}
+        </div>
+
+        <div className="flex flex-col items-center space-y-2">
+          <button
+            onClick={handleGenerateAllMissingAlternatives}
+            disabled={
+              isGenerating ||
+              !userId ||
+              NUM_QUESTIONS - 1 - questionsWithCounterfactuals.size === 0
+            }
+            className="flex items-center gap-2 px-6 py-3 bg-blue-500 text-white border border-blue-500 rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <span className="text-lg">🚀</span>
+            {isGenerating
+              ? "Generating all missing alternatives..."
+              : NUM_QUESTIONS - 1 - questionsWithCounterfactuals.size === 0
+              ? "All alternatives generated!"
+              : `Generate all missing alternatives (${
+                  NUM_QUESTIONS - 1 - questionsWithCounterfactuals.size
+                } remaining)`}
+          </button>
+          {questionsWithCounterfactuals.size > 0 && (
+            <p className="text-xs" style={{ color: "#3B82F6" }}>
+              💡 {questionsWithCounterfactuals.size} question
+              {questionsWithCounterfactuals.size > 1 ? "s" : ""} with
+              alternatives •{" "}
+              {NUM_QUESTIONS - 1 - questionsWithCounterfactuals.size} remaining
+              (situation description excluded)
+            </p>
+          )}
+        </div>
         {showCounterfactuals && counterfactuals.length > 0 && (
           <p className="text-xs" style={{ color: "#3B82F6" }}>
             {counterfactuals.length} alternatives generated around selected
@@ -1115,13 +1330,6 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
               ` • Alternative ${String.fromCharCode(
                 65 + selectedCounterfactual.index
               )} selected`}
-          </p>
-        )}
-        {!showCounterfactuals && questionsWithCounterfactuals.size > 0 && (
-          <p className="text-xs" style={{ color: "#3B82F6" }}>
-            💡 {questionsWithCounterfactuals.size} question
-            {questionsWithCounterfactuals.size > 1 ? "s" : ""} with generated
-            alternatives • Click blue indicators to view
           </p>
         )}
         {weeklyPlan && (
