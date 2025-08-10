@@ -400,36 +400,36 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
   ];
 
   // Generate indicator nodes for questions that have existing counterfactuals
-  const generateIndicatorNodes = (): Node[] => {
-    const indicatorNodes: Node[] = [];
+  // const generateIndicatorNodes = (): Node[] => {
+  //   const indicatorNodes: Node[] = [];
 
-    questionsWithCounterfactuals.forEach((questionIndex) => {
-      // Skip if this question is currently selected and expanded
-      if (selectedQuestionIndex === questionIndex && showCounterfactuals)
-        return;
+  //   questionsWithCounterfactuals.forEach((questionIndex) => {
+  //     // Skip if this question is currently selected and expanded
+  //     if (selectedQuestionIndex === questionIndex && showCounterfactuals)
+  //       return;
 
-      const questionNode = mainNodes.find(
-        (n) => n.questionIndex === questionIndex
-      );
-      if (!questionNode) return;
+  //     const questionNode = mainNodes.find(
+  //       (n) => n.questionIndex === questionIndex
+  //     );
+  //     if (!questionNode) return;
 
-      // Position indicator vertically above the main node
-      const indicatorX = questionNode.x; // Same horizontal position
-      const indicatorY = questionNode.y - 12; // 12% offset up
+  //     // Position indicator vertically above the main node
+  //     const indicatorX = questionNode.x; // Same horizontal position
+  //     const indicatorY = questionNode.y - 12; // 12% offset up
 
-      indicatorNodes.push({
-        id: `indicator-${questionIndex}`,
-        x: Math.max(5, Math.min(95, indicatorX)),
-        y: Math.max(5, Math.min(95, indicatorY)),
-        size: "extra-small",
-        type: "indicator",
-        questionIndex,
-        text: `Alternatives available`,
-      });
-    });
+  //     indicatorNodes.push({
+  //       id: `indicator-${questionIndex}`,
+  //       x: Math.max(5, Math.min(95, indicatorX)),
+  //       y: Math.max(5, Math.min(95, indicatorY)),
+  //       size: "extra-small",
+  //       type: "indicator",
+  //       questionIndex,
+  //       text: `Alternatives available`,
+  //     });
+  //   });
 
-    return indicatorNodes;
-  };
+  //   return indicatorNodes;
+  // };
 
   // Generate counterfactual nodes around selected circle
   const generateCounterfactualNodes = (selectedNode: Node): Node[] => {
@@ -477,8 +477,8 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
     const cfNodes = selectedNode
       ? generateCounterfactualNodes(selectedNode)
       : [];
-    const indicatorNodes = generateIndicatorNodes();
-    return [...mainNodes, ...indicatorNodes, ...cfNodes];
+    // const indicatorNodes = generateIndicatorNodes();
+    return [...mainNodes, /* ...indicatorNodes, */ ...cfNodes];
   };
 
   const connections = [
@@ -904,42 +904,42 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
   };
 
   // Generate connection lines from main nodes to their indicator nodes
-  const getIndicatorConnections = () => {
-    const indicatorConnections: Array<{
-      from: string;
-      to: string;
-      fromNode: Node;
-      toNode: Node;
-    }> = [];
+  // const getIndicatorConnections = () => {
+  //   const indicatorConnections: Array<{
+  //     from: string;
+  //     to: string;
+  //     fromNode: Node;
+  //     toNode: Node;
+  //   }> = [];
 
-    questionsWithCounterfactuals.forEach((questionIndex) => {
-      // Skip if this question is currently expanded
-      if (selectedQuestionIndex === questionIndex && showCounterfactuals)
-        return;
+  //   questionsWithCounterfactuals.forEach((questionIndex) => {
+  //     // Skip if this question is currently expanded
+  //     if (selectedQuestionIndex === questionIndex && showCounterfactuals)
+  //       return;
 
-      const questionNode = mainNodes.find(
-        (n) => n.questionIndex === questionIndex
-      );
-      const indicatorNode = allNodes.find(
-        (n) => n.id === `indicator-${questionIndex}`
-      );
+  //     const questionNode = mainNodes.find(
+  //       (n) => n.questionIndex === questionIndex
+  //     );
+  //     const indicatorNode = allNodes.find(
+  //       (n) => n.id === `indicator-${questionIndex}`
+  //     );
 
-      if (questionNode && indicatorNode) {
-        indicatorConnections.push({
-          from: questionNode.id,
-          to: indicatorNode.id,
-          fromNode: questionNode,
-          toNode: indicatorNode,
-        });
-      }
-    });
+  //     if (questionNode && indicatorNode) {
+  //       indicatorConnections.push({
+  //         from: questionNode.id,
+  //         to: indicatorNode.id,
+  //         fromNode: questionNode,
+  //         toNode: indicatorNode,
+  //       });
+  //     }
+  //   });
 
-    return indicatorConnections;
-  };
+  //   return indicatorConnections;
+  // };
 
   const allNodes = getAllNodes();
   const counterfactualConnections = getCounterfactualConnections();
-  const indicatorConnections = getIndicatorConnections();
+  // const indicatorConnections = getIndicatorConnections();
 
   return (
     <div className="w-full h-full bg-white border rounded-lg flex flex-col">
@@ -1000,7 +1000,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
               );
             })}
             {/* Indicator connection lines */}
-            {indicatorConnections.map((connection, idx) => {
+            {/* {indicatorConnections.map((connection, idx) => {
               return (
                 <line
                   key={`indicator-line-${idx}`}
@@ -1012,7 +1012,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
                   strokeWidth="2"
                 />
               );
-            })}
+            })} */}
           </svg>
 
           {/* Nodes */}
