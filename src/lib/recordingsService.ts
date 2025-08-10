@@ -266,6 +266,7 @@ export class RecordingsService {
   /**
    * Create a session object from recordings
    */
+<<<<<<< HEAD
   // private static createSession(recordings: Recording[]): RecordingSession {
   //   const sortedByStep = [...recordings].sort((a, b) => (a.stepNumber || 0) - (b.stepNumber || 0));
   //   const completedAt = new Date(Math.max(...recordings.map(r => r.createdAt.getTime())));
@@ -276,6 +277,18 @@ export class RecordingsService {
   //     isComplete: recordings.length === 5,
   //   };
   // }
+=======
+  private static createSession(recordings: Recording[]): RecordingSession {
+    const sortedByStep = [...recordings].sort((a, b) => (a.stepNumber || 0) - (b.stepNumber || 0));
+    const completedAt = new Date(Math.max(...recordings.map(r => r.createdAt.getTime())));
+    return {
+      sessionId: `session${sortedByStep[0]?.sessionNumber ?? 'unknown'}`,
+      recordings: sortedByStep,
+      completedAt,
+      isComplete: recordings.length === 5,
+    };
+  }
+>>>>>>> 8e31015 (change play button to pause if clicked again)
   
   /**
    * Associate recording sessions with weekly plans automatically
