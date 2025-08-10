@@ -36,13 +36,15 @@ export class CounterfactualFirebaseService {
     userId: string,
     recordingId: string,
     questionIndex: number,
-    alternatives: string[]
+    alternatives: string[],
+    sessionId?: string
   ): Promise<void> {
     try {
       console.log("💾 Saving counterfactuals for recording:", recordingId);
       console.log("🔐 User ID:", userId);
       console.log("📝 Question Index:", questionIndex);
       console.log("🔄 Alternatives count:", alternatives.length);
+      console.log("📁 Session ID:", sessionId);
 
       if (!userId) {
         throw new Error("User ID is required to save counterfactuals");
@@ -55,9 +57,17 @@ export class CounterfactualFirebaseService {
         // selectedAlternative will be added when user selects one
       };
 
-      // Use the simple counterfactuals/{recordingId} path
-      const counterfactualRef = doc(db, "counterfactuals", recordingId);
-      console.log("🔄 Using new path:", counterfactualRef.path);
+      // Use the new hierarchical path: users/{userId}/sessions/{sessionId}/counterfactuals/{recordingId}
+      const counterfactualRef = doc(
+        db,
+        "users",
+        userId,
+        "sessions",
+        sessionId || "default",
+        "counterfactuals",
+        recordingId
+      );
+      console.log("🔄 Using new hierarchical path:", counterfactualRef.path);
 
       // Check if the document exists first
       const docSnap = await getDoc(counterfactualRef);
@@ -67,6 +77,7 @@ export class CounterfactualFirebaseService {
         await setDoc(counterfactualRef, {
           userId,
           recordingId,
+          sessionId: sessionId || "default",
           createdAt: Timestamp.fromDate(new Date()),
           counterfactualResults: {
             ...counterfactualData,
@@ -89,6 +100,7 @@ export class CounterfactualFirebaseService {
       console.error("🔍 Error details:", {
         userId,
         recordingId,
+        sessionId,
         questionIndex,
         alternativesCount: alternatives.length,
         errorMessage: error instanceof Error ? error.message : String(error),
@@ -105,7 +117,8 @@ export class CounterfactualFirebaseService {
     userId: string,
     recordingId: string,
     alternativeIndex: number,
-    alternativeText: string
+    alternativeText: string,
+    sessionId?: string
   ): Promise<void> {
     try {
       console.log(
@@ -117,10 +130,18 @@ export class CounterfactualFirebaseService {
         throw new Error("User ID is required to save selected counterfactual");
       }
 
-      // Use the simple counterfactuals/{recordingId} path
-      const counterfactualRef = doc(db, "counterfactuals", recordingId);
+      // Use the new hierarchical path: users/{userId}/sessions/{sessionId}/counterfactuals/{recordingId}
+      const counterfactualRef = doc(
+        db,
+        "users",
+        userId,
+        "sessions",
+        sessionId || "default",
+        "counterfactuals",
+        recordingId
+      );
       console.log(
-        "🔄 Using new path for selected counterfactual:",
+        "🔄 Using new hierarchical path for selected counterfactual:",
         counterfactualRef.path
       );
 
@@ -160,7 +181,8 @@ export class CounterfactualFirebaseService {
   static async saveFeasibilityRating(
     userId: string,
     recordingId: string,
-    rating: number
+    rating: number,
+    sessionId?: string
   ): Promise<void> {
     try {
       console.log(
@@ -174,10 +196,18 @@ export class CounterfactualFirebaseService {
         throw new Error("User ID is required to save feasibility rating");
       }
 
-      // Use the simple counterfactuals/{recordingId} path
-      const counterfactualRef = doc(db, "counterfactuals", recordingId);
+      // Use the new hierarchical path: users/{userId}/sessions/{sessionId}/counterfactuals/{recordingId}
+      const counterfactualRef = doc(
+        db,
+        "users",
+        userId,
+        "sessions",
+        sessionId || "default",
+        "counterfactuals",
+        recordingId
+      );
       console.log(
-        "🔄 Using new path for feasibility rating:",
+        "🔄 Using new hierarchical path for feasibility rating:",
         counterfactualRef.path
       );
 
@@ -215,7 +245,8 @@ export class CounterfactualFirebaseService {
    */
   static async removeSelectedCounterfactual(
     userId: string,
-    recordingId: string
+    recordingId: string,
+    sessionId?: string
   ): Promise<void> {
     try {
       console.log(
@@ -229,10 +260,18 @@ export class CounterfactualFirebaseService {
         );
       }
 
-      // Use the simple counterfactuals/{recordingId} path
-      const counterfactualRef = doc(db, "counterfactuals", recordingId);
+      // Use the new hierarchical path: users/{userId}/sessions/{sessionId}/counterfactuals/{recordingId}
+      const counterfactualRef = doc(
+        db,
+        "users",
+        userId,
+        "sessions",
+        sessionId || "default",
+        "counterfactuals",
+        recordingId
+      );
       console.log(
-        "🔄 Using new path for removing counterfactual:",
+        "🔄 Using new hierarchical path for removing counterfactual:",
         counterfactualRef.path
       );
 
@@ -267,7 +306,8 @@ export class CounterfactualFirebaseService {
    */
   static async getCounterfactuals(
     userId: string,
-    recordingId: string
+    recordingId: string,
+    sessionId?: string
   ): Promise<CounterfactualData | null> {
     try {
       if (!userId) {
@@ -275,10 +315,18 @@ export class CounterfactualFirebaseService {
         return null;
       }
 
-      // Use the simple counterfactuals/{recordingId} path
-      const counterfactualRef = doc(db, "counterfactuals", recordingId);
+      // Use the new hierarchical path: users/{userId}/sessions/{sessionId}/counterfactuals/{recordingId}
+      const counterfactualRef = doc(
+        db,
+        "users",
+        userId,
+        "sessions",
+        sessionId || "default",
+        "counterfactuals",
+        recordingId
+      );
       console.log(
-        "🔍 Using new path for getting counterfactuals:",
+        "🔍 Using new hierarchical path for getting counterfactuals:",
         counterfactualRef.path
       );
 
@@ -327,7 +375,8 @@ export class CounterfactualFirebaseService {
   static async saveSessionCounterfactuals(
     userId: string,
     sessionRecordings: Array<{ recordingId: string; questionIndex: number }>,
-    allCounterfactuals: string[]
+    allCounterfactuals: string[],
+    sessionId?: string
   ): Promise<void> {
     try {
       console.log(
@@ -335,6 +384,7 @@ export class CounterfactualFirebaseService {
         sessionRecordings.length,
         "recordings"
       );
+      console.log("📁 Session ID:", sessionId);
 
       // Save counterfactuals to each recording based on its question index
       const savePromises = sessionRecordings.map(
@@ -345,7 +395,8 @@ export class CounterfactualFirebaseService {
             userId,
             recordingId,
             questionIndex,
-            allCounterfactuals
+            allCounterfactuals,
+            sessionId
           );
         }
       );

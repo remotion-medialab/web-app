@@ -93,7 +93,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
   onQuestionSelect,
   onRecordingSelect,
 }) => {
-  const { userId, user } = useAuth();
+  const { userId } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
   const [counterfactuals, setCounterfactuals] = useState<string[]>([]);
   const [showCounterfactuals, setShowCounterfactuals] = useState(false);
@@ -120,7 +120,8 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
           const existingData =
             await CounterfactualFirebaseService.getCounterfactuals(
               userId,
-              selectedRecording.id
+              selectedRecording.id,
+              session.sessionId
             );
 
           if (existingData) {
@@ -191,7 +192,8 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
               const existingData =
                 await CounterfactualFirebaseService.getCounterfactuals(
                   userId,
-                  recording.id
+                  recording.id,
+                  session.sessionId
                 );
               if (existingData && existingData.alternatives.length > 0) {
                 questionsWithCf.add(questionIndex);
@@ -272,7 +274,8 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
         await CounterfactualFirebaseService.saveFeasibilityRating(
           userId,
           selectedRecording.id,
-          rating
+          rating,
+          session.sessionId
         );
 
         console.log("✅ Feasibility rating saved:", rating);
@@ -581,7 +584,8 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
               userId,
               selectedRecording.id,
               selectedQuestionIndex,
-              allCounterfactuals
+              allCounterfactuals,
+              session.sessionId
             );
             console.log("✅ Counterfactuals saved to Firebase");
 
@@ -656,7 +660,8 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
           if (selectedRecording && userId) {
             CounterfactualFirebaseService.removeSelectedCounterfactual(
               userId,
-              selectedRecording.id
+              selectedRecording.id,
+              session.sessionId
             )
               .then(() => console.log("✅ Selection removed from Firebase"))
               .catch((error) => {
@@ -684,7 +689,8 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
               userId,
               selectedRecording.id,
               cfIndex,
-              node.text!
+              node.text!,
+              session.sessionId
             )
               .then(() => console.log("✅ Selection saved to Firebase"))
               .catch((error) => {
@@ -1002,7 +1008,8 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
                       userId,
                       selectedRecording.id,
                       selectedCounterfactual.index,
-                      selectedCounterfactual.text
+                      selectedCounterfactual.text,
+                      session.sessionId
                     );
                     console.log("✅ Alternative confirmed and saved");
                     toast.success(

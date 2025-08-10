@@ -93,7 +93,8 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
         for (const recording of session.recordings) {
           const data = await CounterfactualFirebaseService.getCounterfactuals(
             userId,
-            recording.id
+            recording.id,
+            session.sessionId
           );
           if (data) {
             counterfactualData[recording.id] = data;
