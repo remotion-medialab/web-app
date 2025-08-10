@@ -1035,13 +1035,19 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
       <div className="p-6 border-t flex flex-col items-center space-y-2">
         <button
           onClick={handleGenerateAlternatives}
-          disabled={isGenerating || selectedQuestionIndex === undefined}
+          disabled={
+            isGenerating ||
+            selectedQuestionIndex === undefined ||
+            (showCounterfactuals && counterfactuals.length > 0)
+          }
           className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-300 rounded-full hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
           style={{ color: "#545454" }}
         >
           <span className="text-lg">✨</span>
           {isGenerating
             ? "Generating..."
+            : showCounterfactuals && counterfactuals.length > 0
+            ? "Alternatives already generated"
             : 'Generate "What if..." alternatives'}
         </button>
         {selectedQuestionIndex === undefined && (
