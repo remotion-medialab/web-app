@@ -45,8 +45,18 @@ interface Counterfactual {
 const LikertScale: React.FC<{
   rating: number | undefined;
   onRatingChange: (rating: number) => void;
+  onSave: (rating: number) => void;
   disabled?: boolean;
-}> = ({ rating, onRatingChange, disabled = false }) => {
+}> = ({ rating, onRatingChange, onSave, disabled = false }) => {
+  const [selectedRating, setSelectedRating] = useState<number | undefined>(rating);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+
+  // Update selected rating when prop changes
+  useEffect(() => {
+    setSelectedRating(rating);
+    setHasUnsavedChanges(false);
+  }, [rating]);
+
   const labels = [
     "Not feasible at all",
     "Slightly feasible",
@@ -55,8 +65,26 @@ const LikertScale: React.FC<{
     "Extremely feasible",
   ];
 
-  // Only show selected state if rating is a valid value (1-5)
-  const isValidRating = rating && rating >= 1 && rating <= 5;
+  // Only show selected state if selectedRating is a valid value (1-5)
+  const isValidRating = selectedRating && selectedRating >= 1 && selectedRating <= 5;
+
+  const handleRatingClick = (value: number) => {
+    if (disabled) return;
+    
+    setSelectedRating(value);
+    setHasUnsavedChanges(true);
+  };
+
+  const handleSave = () => {
+    if (selectedRating && hasUnsavedChanges) {
+      // First update the local state
+      onRatingChange(selectedRating);
+      // Then save to Firebase
+      onSave(selectedRating);
+      // Clear the unsaved changes flag
+      setHasUnsavedChanges(false);
+    }
+  };
 
   return (
     <div className="space-y-3">
@@ -67,10 +95,10 @@ const LikertScale: React.FC<{
         {[1, 2, 3, 4, 5].map((value) => (
           <button
             key={value}
-            onClick={() => !disabled && onRatingChange(value)}
+            onClick={() => handleRatingClick(value)}
             disabled={disabled}
             className={`w-8 h-8 rounded-full transition-all flex items-center justify-center text-xs font-medium ${
-              isValidRating && rating === value
+              isValidRating && selectedRating === value
                 ? "bg-blue-500 text-white scale-110"
                 : "bg-gray-200 text-gray-600 hover:bg-gray-300"
             } ${disabled ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
@@ -82,8 +110,19 @@ const LikertScale: React.FC<{
       </div>
       {isValidRating && (
         <p className="text-xs text-gray-500 text-center">
-          {labels[rating - 1]}
+          {labels[selectedRating - 1]}
         </p>
+      )}
+      {hasUnsavedChanges && (
+        <div className="flex justify-center mt-2">
+          <button
+            onClick={handleSave}
+            disabled={disabled}
+            className="px-4 py-2 bg-blue-500 text-white text-sm rounded-md hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            Save Rating
+          </button>
+        </div>
       )}
     </div>
   );
@@ -267,7 +306,21 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
     loadWeeklyPlan();
   }, [userId, session.completedAt]);
 
-  const handleFeasibilityRatingChange = async (rating: number) => {
+  const handleFeasibilityRatingChange = (rating: number) => {
+    if (
+      !userId ||
+      selectedQuestionIndex === undefined ||
+      !selectedCounterfactual
+    )
+      return;
+
+    // Update local state only
+    setSelectedCounterfactual((prev) =>
+      prev ? { ...prev, feasibilityRating: rating } : null
+    );
+  };
+
+  const handleSaveFeasibilityRating = async (rating: number) => {
     if (
       !userId ||
       selectedQuestionIndex === undefined ||
@@ -281,11 +334,6 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
       );
 
       if (selectedRecording) {
-        // Update local state
-        setSelectedCounterfactual((prev) =>
-          prev ? { ...prev, feasibilityRating: rating } : null
-        );
-
         // Save to Firebase for the specific counterfactual index
         await CounterfactualFirebaseService.saveHumanFeasibilityRating(
           userId,
@@ -1026,6 +1074,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
             <LikertScale
               rating={selectedCounterfactual.feasibilityRating}
               onRatingChange={handleFeasibilityRatingChange}
+              onSave={handleSaveFeasibilityRating}
             />
           </div>
         </div>
