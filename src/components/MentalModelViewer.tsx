@@ -303,25 +303,25 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
       questionIndex: 1,
     },
     {
-      id: "left",
-      x: 25,
+      id: "right",
+      x: 75,
       y: 50,
       size: "large",
       type: selectedQuestionIndex === 2 ? "outline-blue" : "light-filled",
       questionIndex: 2,
     },
     {
-      id: "right",
-      x: 75,
-      y: 50,
+      id: "bottom",
+      x: 50,
+      y: 75,
       size: "large",
       type: selectedQuestionIndex === 3 ? "outline-blue" : "light-filled",
       questionIndex: 3,
     },
-    {
-      id: "bottom",
-      x: 50,
-      y: 75,
+        {
+      id: "left",
+      x: 25,
+      y: 50,
       size: "large",
       type: selectedQuestionIndex === 4 ? "outline-blue" : "light-filled",
       questionIndex: 4,
@@ -623,7 +623,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
 
       // Select the question and load its counterfactuals
       if (onQuestionSelect) {
-        onQuestionSelect(node.questionIndex);
+        onQuestionSelect(node.questionIndex-1);
       }
 
       // Also select the corresponding recording to keep the transcript in sync
