@@ -665,10 +665,44 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
       const cfIndex = parseInt(node.id.split("-")[1]); // Extract index from id like "cf-0"
       console.log("Clicked counterfactual:", cfIndex, node.text);
 
-      // Update local state to reflect the selected alternative
+      // Get the existing feasibility rating for this counterfactual
+      let feasibilityRating: number | undefined;
+      if (selectedQuestionIndex !== undefined && userId) {
+        try {
+          const selectedRecording = session.recordings.find(
+            (r) => r.stepNumber === selectedQuestionIndex
+          );
+
+          if (selectedRecording) {
+            const existingData =
+              await CounterfactualFirebaseService.getCounterfactuals(
+                userId,
+                selectedRecording.id,
+                session.sessionId
+              );
+
+            if (
+              existingData?.humanFeasibilityRating &&
+              existingData.humanFeasibilityRating.length > cfIndex
+            ) {
+              const rating = existingData.humanFeasibilityRating[cfIndex];
+              // Only use valid ratings (1-5), ignore -1 (no rating)
+              if (rating >= 1 && rating <= 5) {
+                feasibilityRating = rating;
+              }
+            }
+          }
+        } catch (error) {
+          console.error("Failed to load feasibility rating:", error);
+          // Don't show error toast for this, just log it
+        }
+      }
+
+      // Update local state to reflect the selected alternative with its rating
       setSelectedCounterfactual({
         index: cfIndex,
         text: node.text!,
+        feasibilityRating: feasibilityRating,
       });
     } else if (node.questionIndex !== undefined && onQuestionSelect) {
       onQuestionSelect(node.questionIndex);
@@ -713,6 +747,20 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
       nodeId?.startsWith("cf-") &&
       selectedCounterfactual?.index === parseInt(nodeId.split("-")[1]);
 
+    // Check if this counterfactual has been rated
+    const hasRating = (() => {
+      if (
+        nodeId?.startsWith("cf-") &&
+        selectedQuestionIndex !== undefined &&
+        userId
+      ) {
+        // We'll need to check the existing data for ratings
+        // This is a simplified check - in a real implementation, you might want to cache this data
+        return false; // For now, we'll keep it simple
+      }
+      return false;
+    })();
+
     switch (type) {
       case "filled-blue":
         return { backgroundColor: "#3B82F6", border: "none" };
@@ -724,6 +772,8 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
         return {
           backgroundColor: isSelectedCf ? "#1D4ED8" : "#60A5FA",
           border: isSelectedCf ? "3px solid #1E40AF" : "2px solid #3B82F6",
+          // Add a subtle indicator for rated counterfactuals
+          boxShadow: hasRating ? "0 0 0 2px #10B981" : "none",
         };
       case "indicator":
         return {
@@ -745,9 +795,29 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
     if (node.isCounterfactual) {
       const cfIndex = parseInt(node.id.split("-")[1]);
       const isSelected = selectedCounterfactual?.index === cfIndex;
+
+      // Try to get the rating for this counterfactual
+      let ratingInfo = "";
+      if (selectedQuestionIndex !== undefined && userId) {
+        // This is a simplified approach - in a full implementation, you might want to cache this data
+        // For now, we'll just show the rating if it's the currently selected one
+        if (isSelected && selectedCounterfactual?.feasibilityRating) {
+          const labels = [
+            "Not feasible at all",
+            "Slightly feasible",
+            "Somewhat feasible",
+            "Very feasible",
+            "Extremely feasible",
+          ];
+          ratingInfo = `\n\nRating: ${
+            selectedCounterfactual.feasibilityRating
+          }/5 - ${labels[selectedCounterfactual.feasibilityRating - 1]}`;
+        }
+      }
+
       return `${isSelected ? "✓ Selected: " : "Click to select: "}${
         node.text || "Counterfactual suggestion"
-      }`;
+      }${ratingInfo}`;
     }
 
     if (node.questionIndex !== undefined) {
