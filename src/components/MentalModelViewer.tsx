@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
-import type { RecordingSession } from "../lib/recordingsService";
+import type { RecordingSession, Recording } from "../lib/recordingsService";
 import { RECORDING_QUESTIONS } from "../constants/recordingQuestions";
 import { CounterfactualFirebaseService } from "../lib/counterfactualFirebaseService";
 import { useAuth } from "../contexts/AuthContext";
@@ -16,6 +16,7 @@ interface MentalModelViewerProps {
   onClose: () => void;
   selectedQuestionIndex?: number;
   onQuestionSelect?: (index: number) => void;
+  onRecordingSelect?: (recording: Recording) => void;
 }
 
 interface Node {
@@ -45,6 +46,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
   onClose,
   selectedQuestionIndex,
   onQuestionSelect,
+  onRecordingSelect,
 }) => {
   const { userId } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
@@ -491,6 +493,16 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
       if (onQuestionSelect) {
         onQuestionSelect(node.questionIndex);
       }
+      
+      // Also select the corresponding recording to keep the transcript in sync
+      if (onRecordingSelect) {
+        const correspondingRecording = session.recordings.find(
+          (r) => r.stepNumber === node.questionIndex
+        );
+        if (correspondingRecording) {
+          onRecordingSelect(correspondingRecording);
+        }
+      }
 
       // The useEffect will automatically load the counterfactuals when selectedQuestionIndex changes
     } else if (node.isCounterfactual && node.text) {
@@ -552,6 +564,17 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
       });
     } else if (node.questionIndex !== undefined && onQuestionSelect) {
       onQuestionSelect(node.questionIndex);
+      
+      // Also select the corresponding recording to keep the transcript in sync
+      if (onRecordingSelect) {
+        const correspondingRecording = session.recordings.find(
+          (r) => r.stepNumber === node.questionIndex
+        );
+        if (correspondingRecording) {
+          onRecordingSelect(correspondingRecording);
+        }
+      }
+      
       // Only clear if switching to a different question
       if (selectedQuestionIndex !== node.questionIndex) {
         setShowCounterfactuals(false); // Reset counterfactuals when switching questions

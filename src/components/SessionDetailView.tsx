@@ -22,8 +22,21 @@ interface SessionDetailViewProps {
   onToggleMentalModel?: () => void;
   selectedQuestionIndex?: number;
   onQuestionSelect?: (index: number) => void;
+  showMentalModel?: boolean;
+  onToggleMentalModel?: () => void;
+  selectedQuestionIndex?: number;
+  onQuestionSelect?: (index: number) => void;
 }
 
+const SessionDetailView: React.FC<SessionDetailViewProps> = ({
+  session,
+  selectedRecording,
+  onClose,
+  onRecordingSelect,
+  showMentalModel,
+  onToggleMentalModel: _onToggleMentalModel,
+  selectedQuestionIndex,
+  onQuestionSelect,
 const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   session,
   selectedRecording,
@@ -197,10 +210,20 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
         <div>
           <h2 className="text-lg font-semibold" style={{ color: "#545454" }}>
             {format(session.completedAt, "EEEE, MMMM d, yyyy h:mm a")}
+            {format(session.completedAt, "EEEE, MMMM d, yyyy h:mm a")}
           </h2>
           <p className="text-sm" style={{ color: "#b0b0b0" }}>
             Voice entry transcript
           </p>
+          {transcriptionProgress.isTranscribing && (
+            <div className="mt-2 flex items-center space-x-2">
+              <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+              <span className="text-xs text-blue-600">
+                Transcribing... ({transcriptionProgress.completed} of{" "}
+                {transcriptionProgress.total} complete)
+              </span>
+            </div>
+          )}
           {transcriptionProgress.isTranscribing && (
             <div className="mt-2 flex items-center space-x-2">
               <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
@@ -248,6 +271,41 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
         </div>
       )}
 
+      {/* Transcription Progress Bar */}
+      {transcriptionProgress.isTranscribing && (
+        <div className="mb-6 bg-gray-100 rounded-lg p-4">
+          <div className="flex items-center justify-between mb-2">
+            <span className="text-sm font-medium" style={{ color: "#545454" }}>
+              Transcription Progress
+            </span>
+            <span className="text-sm" style={{ color: "#b0b0b0" }}>
+              {transcriptionProgress.completed}/{transcriptionProgress.total}
+            </span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2 mb-2">
+            <div
+              className="bg-blue-500 h-2 rounded-full transition-all duration-300 ease-out"
+              style={{ width: `${transcriptionProgress.percentage}%` }}
+            ></div>
+          </div>
+          <div
+            className="flex items-center space-x-4 text-xs"
+            style={{ color: "#b0b0b0" }}
+          >
+            <span>✅ {transcriptionProgress.completed} completed</span>
+            {transcriptionProgress.processing > 0 && (
+              <span className="flex items-center space-x-1">
+                <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                <span>{transcriptionProgress.processing} processing</span>
+              </span>
+            )}
+            {transcriptionProgress.failed > 0 && (
+              <span>❌ {transcriptionProgress.failed} failed</span>
+            )}
+          </div>
+        </div>
+      )}
+
       {/* Recordings with questions and transcriptions */}
       <div className="flex-1 space-y-6 overflow-y-auto">
         {session.recordings
@@ -255,7 +313,13 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
           .map((recording) => (
             <div
               key={recording.id}
+          .map((recording) => (
+            <div
+              key={recording.id}
               className={`space-y-3 cursor-pointer transition-colors ${
+                selectedRecording?.id === recording.id
+                  ? "bg-blue-100 border-2 border-blue-300"
+                  : "hover:bg-blue-50"
                 selectedRecording?.id === recording.id
                   ? "bg-blue-100 border-2 border-blue-300"
                   : "hover:bg-blue-50"
@@ -264,10 +328,21 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                 onRecordingSelect?.(recording);
                 onQuestionSelect?.(recording.stepNumber);
               }}
+              onClick={() => {
+                onRecordingSelect?.(recording);
+                onQuestionSelect?.(recording.stepNumber);
+              }}
               title="Click to view mental model"
             >
               {/* Question with blue circle */}
               <div className="flex items-start gap-3">
+                <div className="w-6 h-6 rounded-full bg-blue-500 flex-shrink-0 mt-1"></div>
+                <h3
+                  className="font-medium text-base"
+                  style={{ color: "#545454" }}
+                >
+                  {recording.question ||
+                    getQuestionForStep(recording.stepNumber)}
                 <div className="w-6 h-6 rounded-full bg-blue-500 flex-shrink-0 mt-1"></div>
                 <h3
                   className="font-medium text-base"
@@ -288,8 +363,13 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                     <p className="whitespace-pre-wrap leading-relaxed">
                       {recording.transcription.text}
                     </p>
+                    <p className="whitespace-pre-wrap leading-relaxed">
+                      {recording.transcription.text}
+                    </p>
                     {recording.transcription.confidence > 0 && (
                       <p className="text-xs mt-2" style={{ color: "#b0b0b0" }}>
+                        Confidence:{" "}
+                        {(recording.transcription.confidence * 100).toFixed(1)}%
                         Confidence:{" "}
                         {(recording.transcription.confidence * 100).toFixed(1)}%
                       </p>
@@ -328,7 +408,41 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                         : "Transcribe"}
                     </button>
                   </div>
+                ) : recording.transcriptionStatus === "processing" ? (
+                  <div className="flex items-center space-x-2">
+                    <div className="w-4 h-4 border-2 border-blue-500 border-t-transparent rounded-full animate-spin"></div>
+                    <p className="italic text-blue-600">
+                      Transcribing audio...
+                    </p>
+                  </div>
+                ) : recording.transcriptionStatus === "failed" ? (
+                  <div className="flex items-center justify-between">
+                    <p className="italic text-red-500">Transcription failed</p>
+                    <button
+                      onClick={() => retryTranscription(recording)}
+                      disabled={retryingTranscriptions.has(recording.id)}
+                      className="ml-2 px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {retryingTranscriptions.has(recording.id)
+                        ? "Retrying..."
+                        : "Retry"}
+                    </button>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-between">
+                    <p className="italic">No transcription available</p>
+                    <button
+                      onClick={() => retryTranscription(recording)}
+                      disabled={retryingTranscriptions.has(recording.id)}
+                      className="ml-2 px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      {retryingTranscriptions.has(recording.id)
+                        ? "Transcribing..."
+                        : "Transcribe"}
+                    </button>
+                  </div>
                 )}
+
 
                 {/* Play button */}
                 {recording.audioUri && (
@@ -381,9 +495,41 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                 </div>
               )}
 
+              {/* Selected Counterfactual if available */}
+              {recordingCounterfactuals[recording.id]?.selectedAlternative && (
+                <div className="ml-9 mt-3">
+                  <div className="flex items-start gap-3 mb-2">
+                    <div className="w-6 h-6 rounded-full bg-blue-500 flex-shrink-0 mt-1"></div>
+                    <h4
+                      className="font-medium text-base"
+                      style={{ color: "#545454" }}
+                    >
+                      Alternative{" "}
+                      {String.fromCharCode(
+                        65 +
+                          (recordingCounterfactuals[recording.id]
+                            ?.selectedAlternative?.index ?? 0)
+                      )}
+                    </h4>
+                  </div>
+                  <div
+                    className="bg-white border border-gray-200 rounded-2xl p-4 text-sm ml-9"
+                    style={{ color: "#666666" }}
+                  >
+                    <p className="whitespace-pre-wrap leading-relaxed">
+                      {recordingCounterfactuals[recording.id]
+                        ?.selectedAlternative?.text ?? ""}
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Activity summary if available */}
               {recording.activitySummary && (
                 <p className="text-xs" style={{ color: "#b0b0b0" }}>
+                  Activity: {recording.activitySummary.primaryActivity}(
+                  {(recording.activitySummary.confidence * 100).toFixed(0)}%
+                  confidence)
                   Activity: {recording.activitySummary.primaryActivity}(
                   {(recording.activitySummary.confidence * 100).toFixed(0)}%
                   confidence)
@@ -403,6 +549,13 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
             ).length
           }{" "}
           transcribed
+          {session.recordings.length} of 5 steps completed •
+          {
+            session.recordings.filter(
+              (r) => r.transcriptionStatus === "completed"
+            ).length
+          }{" "}
+          transcribed
         </p>
       </div>
     </>
@@ -410,3 +563,4 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
 };
 
 export default SessionDetailView;
+
