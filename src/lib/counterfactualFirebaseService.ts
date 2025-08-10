@@ -31,6 +31,27 @@ type CounterfactualsShape = {
 type RecordingDocData = {
   counterfactuals?: CounterfactualsShape;
   counterfactualResults?: CounterfactualsShape;
+  // Flattened structure (new)
+  alternatives?: string[];
+  questionIndex?: number;
+  generatedAt?: Timestamp | Date | string;
+  selectedAlternative?: SelectedAlternativeShape | null;
+  cfLogs?: {
+    sorted20?: string[];
+    feasibilityScore20?: number[];
+    similarityScore20?: number[];
+    sorted15?: string[];
+    similarityScore15?: number[];
+    feasibilityScore15?: number[];
+    similar2_chosen?: string[];
+    neutral1_chosen?: string[];
+    different2_chosen?: string[];
+  };
+  // Basic document fields
+  userId?: string;
+  recordingId?: string;
+  sessionId?: string;
+  createdAt?: Timestamp | Date | string;
 };
 
 const toDate = (v: unknown): Date => {
@@ -103,18 +124,14 @@ export class CounterfactualFirebaseService {
           recordingId,
           sessionId: sessionId || "default",
           createdAt: Timestamp.fromDate(new Date()),
-          counterfactualResults: {
-            ...counterfactualData,
-            generatedAt: Timestamp.fromDate(counterfactualData.generatedAt),
-          },
+          ...counterfactualData,
+          generatedAt: Timestamp.fromDate(counterfactualData.generatedAt),
         });
       } else {
-        console.log("✅ Document exists, updating counterfactualResults...");
+        console.log("✅ Document exists, updating counterfactual data...");
         await updateDoc(counterfactualRef, {
-          counterfactualResults: {
-            ...counterfactualData,
-            generatedAt: Timestamp.fromDate(counterfactualData.generatedAt),
-          },
+          ...counterfactualData,
+          generatedAt: Timestamp.fromDate(counterfactualData.generatedAt),
         });
       }
 
@@ -169,18 +186,18 @@ export class CounterfactualFirebaseService {
         counterfactualRef.path
       );
 
-      // Get current data to preserve existing counterfactualResults
+      // Get current data to preserve existing counterfactual data
       const counterfactualDoc = await getDoc(counterfactualRef);
       const currentData =
         (counterfactualDoc.data() as RecordingDocData | undefined) || {};
 
-      if (!currentData?.counterfactualResults) {
-        console.log("⚠️ No counterfactualResults found");
-        throw new Error("No counterfactualResults found for this recording");
+      if (!currentData?.alternatives) {
+        console.log("⚠️ No counterfactual data found");
+        throw new Error("No counterfactual data found for this recording");
       }
 
-      const updatedCounterfactualResults = {
-        ...currentData.counterfactualResults,
+      const updatedData = {
+        ...currentData,
         selectedAlternative: {
           index: alternativeIndex,
           text: alternativeText,
@@ -188,9 +205,7 @@ export class CounterfactualFirebaseService {
         },
       };
 
-      await updateDoc(counterfactualRef, {
-        counterfactualResults: updatedCounterfactualResults,
-      });
+      await updateDoc(counterfactualRef, updatedData);
 
       console.log("✅ Selected counterfactual saved successfully");
     } catch (error) {
@@ -235,27 +250,25 @@ export class CounterfactualFirebaseService {
         counterfactualRef.path
       );
 
-      // Get current data to preserve existing counterfactualResults
+      // Get current data to preserve existing counterfactual data
       const counterfactualDoc = await getDoc(counterfactualRef);
       const currentData =
         (counterfactualDoc.data() as RecordingDocData | undefined) || {};
 
-      if (!currentData?.counterfactualResults?.selectedAlternative) {
+      if (!currentData?.selectedAlternative) {
         console.log("⚠️ No selected counterfactual found");
         throw new Error("No selected counterfactual found for this recording");
       }
 
-      const updatedCounterfactualResults = {
-        ...currentData.counterfactualResults,
+      const updatedData = {
+        ...currentData,
         selectedAlternative: {
-          ...currentData.counterfactualResults.selectedAlternative,
+          ...currentData.selectedAlternative,
           feasibilityRating: rating,
         },
       };
 
-      await updateDoc(counterfactualRef, {
-        counterfactualResults: updatedCounterfactualResults,
-      });
+      await updateDoc(counterfactualRef, updatedData);
 
       console.log("✅ Feasibility rating saved successfully");
     } catch (error) {
@@ -299,24 +312,22 @@ export class CounterfactualFirebaseService {
         counterfactualRef.path
       );
 
-      // Get current data to preserve existing counterfactualResults
+      // Get current data to preserve existing counterfactual data
       const counterfactualDoc = await getDoc(counterfactualRef);
       const currentData =
         (counterfactualDoc.data() as RecordingDocData | undefined) || {};
 
-      if (!currentData?.counterfactualResults) {
-        console.log("⚠️ No counterfactualResults found");
+      if (!currentData?.alternatives) {
+        console.log("⚠️ No counterfactual data found");
         return; // Nothing to remove
       }
 
-      const updatedCounterfactualResults = {
-        ...currentData.counterfactualResults,
+      const updatedData = {
+        ...currentData,
         selectedAlternative: null, // Remove the selection
       };
 
-      await updateDoc(counterfactualRef, {
-        counterfactualResults: updatedCounterfactualResults,
-      });
+      await updateDoc(counterfactualRef, updatedData);
 
       console.log("✅ Selected counterfactual removed successfully");
     } catch (error) {
@@ -364,11 +375,28 @@ export class CounterfactualFirebaseService {
       const data =
         (counterfactualDoc.data() as RecordingDocData | undefined) || {};
 
-      // Try counterfactualResults first, then fallback to counterfactuals
-      const cf = data.counterfactualResults || data.counterfactuals;
+      // Try flattened structure first, then fallback to old nested structures
+      let cf: CounterfactualsShape | null = null;
+
+      if (data.alternatives) {
+        // New flattened structure
+        cf = {
+          alternatives: data.alternatives,
+          questionIndex: data.questionIndex || 0,
+          generatedAt: data.generatedAt || new Date(),
+          selectedAlternative: data.selectedAlternative,
+          cfLogs: data.cfLogs,
+        };
+      } else if (data.counterfactualResults) {
+        // Old counterfactualResults structure
+        cf = data.counterfactualResults;
+      } else if (data.counterfactuals) {
+        // Old counterfactuals structure
+        cf = data.counterfactuals;
+      }
 
       if (!cf) {
-        console.log("⚠️ No counterfactualResults or counterfactuals found");
+        console.log("⚠️ No counterfactual data found");
         return null;
       }
 
