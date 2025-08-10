@@ -44,13 +44,17 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
 
   // For audio playback control
   const audioRefs = useRef<Record<string, HTMLAudioElement>>({});
-  const [currentlyPlayingId, setCurrentlyPlayingId] = useState<string | null>(null);
+  const [currentlyPlayingId, setCurrentlyPlayingId] = useState<string | null>(
+    null
+  );
 
   // Stop all audio on unmount
   useEffect(() => {
     return () => {
-      Object.values(audioRefs.current).forEach(a => {
-        try { a.pause(); } catch {}
+      Object.values(audioRefs.current).forEach((a) => {
+        try {
+          a.pause();
+        } catch {}
       });
     };
   }, []);
@@ -138,13 +142,17 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
     }
   };
 
-  const handlePlayToggle = (e: React.MouseEvent, recordingId: string, uri: string) => {
+  const handlePlayToggle = (
+    e: React.MouseEvent,
+    recordingId: string,
+    uri: string
+  ) => {
     e.stopPropagation();
 
     if (!audioRefs.current[recordingId]) {
       const a = new Audio(uri);
       a.addEventListener("ended", () => {
-        setCurrentlyPlayingId(prev => (prev === recordingId ? null : prev));
+        setCurrentlyPlayingId((prev) => (prev === recordingId ? null : prev));
       });
       audioRefs.current[recordingId] = a;
     }
@@ -172,12 +180,13 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
     }
 
     // Play this one from start
-    audio.play().then(() => {
-      setCurrentlyPlayingId(recordingId);
-    }).catch(console.error);
-};
-
-
+    audio
+      .play()
+      .then(() => {
+        setCurrentlyPlayingId(recordingId);
+      })
+      .catch(console.error);
+  };
 
   if (showMentalModel) {
     return (
@@ -186,6 +195,7 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
         onClose={onClose}
         selectedQuestionIndex={selectedQuestionIndex}
         onQuestionSelect={onQuestionSelect}
+        onRecordingSelect={onRecordingSelect}
       />
     );
   }
@@ -332,24 +342,36 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
 
                 {/* Play button */}
                 {recording.audioUri && (
-                <div className="absolute bottom-3 right-3">
-                  <div
-                    className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors"
-                    onClick={(e) => handlePlayToggle(e, recording.id, recording.audioUri)}
-                    title={currentlyPlayingId === recording.id ? "Pause" : "Play"}
-                  >
-                    {currentlyPlayingId === recording.id ? (
-                      <svg className="w-4 h-4 text-gray-600" viewBox="0 0 20 20" fill="currentColor">
-                        <path d="M6 4h3v12H6zM11 4h3v12h-3z" />
-                      </svg>
-                    ) : (
-                      <svg className="w-4 h-4 text-gray-600 ml-0.5" fill="currentColor" viewBox="0 0 20 20">
-                        <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
-                      </svg>
-                    )}
+                  <div className="absolute bottom-3 right-3">
+                    <div
+                      className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors"
+                      onClick={(e) =>
+                        handlePlayToggle(e, recording.id, recording.audioUri)
+                      }
+                      title={
+                        currentlyPlayingId === recording.id ? "Pause" : "Play"
+                      }
+                    >
+                      {currentlyPlayingId === recording.id ? (
+                        <svg
+                          className="w-4 h-4 text-gray-600"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path d="M6 4h3v12H6zM11 4h3v12h-3z" />
+                        </svg>
+                      ) : (
+                        <svg
+                          className="w-4 h-4 text-gray-600 ml-0.5"
+                          fill="currentColor"
+                          viewBox="0 0 20 20"
+                        >
+                          <path d="M6.3 2.841A1.5 1.5 0 004 4.11V15.89a1.5 1.5 0 002.3 1.269l9.344-5.89a1.5 1.5 0 000-2.538L6.3 2.84z" />
+                        </svg>
+                      )}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
               </div>
 
               {/* Selected Counterfactual if available */}

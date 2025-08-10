@@ -147,10 +147,19 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
             } else {
               setSelectedCounterfactual(null);
             }
+          } else {
+            // No existing counterfactuals found - this is normal for new users
+            console.log(
+              "📭 No existing counterfactuals found for this question"
+            );
+            setCounterfactuals([]);
+            setShowCounterfactuals(false);
+            setSelectedCounterfactual(null);
           }
         }
       } catch (error) {
         console.error("❌ Failed to load existing counterfactuals:", error);
+        // Only show error toast for actual errors, not when no counterfactuals exist
         toast.error(
           "Failed to load counterfactuals. Please refresh and try again."
         );
@@ -178,13 +187,21 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
             (r) => r.stepNumber === questionIndex
           );
           if (recording) {
-            const existingData =
-              await CounterfactualFirebaseService.getCounterfactuals(
-                userId,
-                recording.id
+            try {
+              const existingData =
+                await CounterfactualFirebaseService.getCounterfactuals(
+                  userId,
+                  recording.id
+                );
+              if (existingData && existingData.alternatives.length > 0) {
+                questionsWithCf.add(questionIndex);
+              }
+            } catch (error) {
+              // Log individual question errors but don't fail the entire check
+              console.warn(
+                `⚠️ Failed to check counterfactuals for question ${questionIndex}:`,
+                error
               );
-            if (existingData && existingData.alternatives.length > 0) {
-              questionsWithCf.add(questionIndex);
             }
           }
         }
@@ -196,6 +213,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
         );
       } catch (error) {
         console.error("❌ Failed to check existing counterfactuals:", error);
+        // Only show error toast for critical failures, not when no counterfactuals exist
         toast.error(
           "Failed to check existing counterfactuals. Please refresh and try again."
         );
