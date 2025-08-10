@@ -12,14 +12,28 @@ import {
 import { db } from "./firebase";
 
 export interface CounterfactualData {
-  alternatives: string[]; // Array of 5 generated alternatives
+  generatedCfTexts: string[]; // Array of 5 generated counterfactual texts
   selectedAlternative?: {
-    index: number; // 0-4 corresponding to alternatives array
+    index: number; // 0-4 corresponding to generatedCfTexts array
     text: string;
     selectedAt: Date;
+    feasibilityRating?: number; // 1-5 Likert scale rating for the selected alternative
   };
   generatedAt: Date;
   questionIndex: number; // Which question (0-4) this relates to
+  transcribed?: string; // Original text data sent to the /counterfactual API
+  humanFeasibilityRating?: number[]; // Array of feasibility ratings for each counterfactual (-1 indicates no rating yet)
+  cfLogs?: {
+    sorted20?: string[];
+    feasibilityScore20?: number[];
+    similarityScore20?: number[];
+    sorted15?: string[];
+    similarityScore15?: number[];
+    feasibilityScore15?: number[];
+    similar2_chosen?: string[];
+    neutral1_chosen?: string[];
+    different2_chosen?: string[];
+  };
 }
 
 export interface Recording {
@@ -169,8 +183,10 @@ export class RecordingsService {
                 : undefined,
               counterfactuals: counterfactuals
                 ? {
-                    alternatives: Array.isArray(counterfactuals.alternatives)
-                      ? (counterfactuals.alternatives as string[])
+                    generatedCfTexts: Array.isArray(
+                      counterfactuals.generatedCfTexts
+                    )
+                      ? (counterfactuals.generatedCfTexts as string[])
                       : [],
                     selectedAlternative: selectedAlt
                       ? {
@@ -240,7 +256,7 @@ export class RecordingsService {
             : undefined,
           counterfactuals: data.counterfactuals
             ? {
-                alternatives: data.counterfactuals.alternatives || [],
+                generatedCfTexts: data.counterfactuals.generatedCfTexts || [],
                 selectedAlternative: data.counterfactuals.selectedAlternative
                   ? {
                       index:
