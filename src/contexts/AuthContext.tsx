@@ -1,13 +1,14 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
-import { onAuthStateChanged, signInAnonymously } from "firebase/auth";
+import { onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
+import toast from "react-hot-toast";
 import { auth } from "../lib/firebase";
 
 interface AuthContextType {
   user: User | null;
   userId: string | null;
   loading: boolean;
-  signInAsTestUser: () => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -39,28 +40,16 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     return unsubscribe;
   }, []);
 
-  const signInAsTestUser = async () => {
+  const logout = async () => {
     try {
       setLoading(true);
-
-      // For demo purposes, you can either:
-      // 1. Sign in anonymously
-      // await signInAnonymously(auth);
-
-      // 2. Or set a specific test user ID (for development)
-      const testUserId = "41cYzOW6hpT1QpNfMuWLTaJRxoB2"; // Your test user
-
-      // Create a mock user object for development
-      const mockUser = {
-        uid: testUserId,
-        email: "test@example.com",
-        displayName: "Test User",
-      } as User;
-
-      setUser(mockUser);
-      console.log("🔐 Signed in as test user:", testUserId);
+      console.log("🔓 Signing out user...");
+      await signOut(auth);
+      console.log("✅ User signed out successfully");
+      toast.success("Signed out successfully");
     } catch (error) {
-      console.error("❌ Sign in failed:", error);
+      console.error("❌ Sign out failed:", error);
+      toast.error("Failed to sign out. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -70,7 +59,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     user,
     userId: user?.uid || null,
     loading,
-    signInAsTestUser,
+    logout,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

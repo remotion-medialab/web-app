@@ -1,7 +1,7 @@
 // src/pages/OverviewPage.tsx
 
 import React, { useState, useEffect } from "react";
-import { addDays, startOfWeek, format, isSameDay } from "date-fns";
+import { addDays, startOfWeek, format } from "date-fns";
 import { useAuth } from "../contexts/AuthContext";
 import { useRecordings } from "../hooks/useRecordings";
 import type { RecordingSession } from "../lib/recordingsService";
@@ -32,6 +32,10 @@ const OverviewPage: React.FC = () => {
   const [selectedRecording, setSelectedRecording] = useState<Recording | null>(
     null
   );
+  const [showMentalModel, setShowMentalModel] = useState(false);
+  const [selectedQuestionIndex, setSelectedQuestionIndex] = useState<
+    number | undefined
+  >(undefined);
   const [currentWeekPlan, setCurrentWeekPlan] = useState<WeeklyPlan | null>(
     null
   );
@@ -45,9 +49,8 @@ const OverviewPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   // Auth and recordings data
-  const { userId, signInAsTestUser, loading: authLoading } = useAuth();
+  const { userId, loading: authLoading, logout } = useAuth();
   const {
-    sessions,
     sessionsByDay,
     loading: recordingsLoading,
     error,
@@ -226,8 +229,8 @@ const OverviewPage: React.FC = () => {
               </p>
             </div>
 
-            {/* navigation arrows */}
-            <div className="flex gap-2">
+            {/* navigation arrows + logout */}
+            <div className="flex gap-2 items-center">
               <button
                 onClick={() => setWeekOffset(weekOffset - 1)}
                 className="px-2 text-lg"
@@ -239,6 +242,15 @@ const OverviewPage: React.FC = () => {
                 className="px-2 text-lg"
               >
                 &gt;
+              </button>
+              <span className="mx-2 text-gray-300">|</span>
+              <button
+                onClick={logout}
+                className="px-3 py-1 text-sm border rounded hover:bg-gray-100"
+                title="Sign out"
+                style={{ borderColor: "#d4d4d4", color: "#545454" }}
+              >
+                Logout
               </button>
             </div>
           </div>
@@ -278,7 +290,9 @@ const OverviewPage: React.FC = () => {
                   onClick={handlePlanButton}
                   showPlan={showPlan}
                   planCreated={planCreated}
-                  weekLabel={WeeklyPlanService.getWeekDisplayRange(addDays(today, weekOffset * 7))}
+                  weekLabel={WeeklyPlanService.getWeekDisplayRange(
+                    addDays(today, weekOffset * 7)
+                  )}
                 />
               </div>
             </WeekPanel>
@@ -300,7 +314,9 @@ const OverviewPage: React.FC = () => {
                   onClick={handlePlanButton}
                   showPlan={showPlan}
                   planCreated={planCreated}
-                  weekLabel={WeeklyPlanService.getWeekDisplayRange(addDays(today, weekOffset * 7))}
+                  weekLabel={WeeklyPlanService.getWeekDisplayRange(
+                    addDays(today, weekOffset * 7)
+                  )}
                 />
               </div>
             </WeekPanel>
@@ -321,8 +337,14 @@ const OverviewPage: React.FC = () => {
                 onClose={() => {
                   setSelectedSession(null);
                   setSelectedRecording(null);
+                  setShowMentalModel(false);
+                  setSelectedQuestionIndex(undefined);
                 }}
                 onRecordingSelect={setSelectedRecording}
+                showMentalModel={showMentalModel}
+                onToggleMentalModel={() => setShowMentalModel(!showMentalModel)}
+                selectedQuestionIndex={selectedQuestionIndex}
+                onQuestionSelect={setSelectedQuestionIndex}
               />
             ) : (
               <>
@@ -392,11 +414,17 @@ const OverviewPage: React.FC = () => {
         )}
 
         {/* RIGHT panel: Mental Model Viewer */}
-        {selectedRecording && (
+        {(selectedRecording || (selectedSession && showMentalModel)) && (
           <div className="w-1/3 flex flex-col">
             <MentalModelViewer
-              recording={selectedRecording}
-              onClose={() => setSelectedRecording(null)}
+              session={selectedSession!}
+              onClose={() => {
+                setSelectedRecording(null);
+                setShowMentalModel(false);
+                setSelectedQuestionIndex(undefined);
+              }}
+              selectedQuestionIndex={selectedQuestionIndex}
+              onQuestionSelect={setSelectedQuestionIndex}
             />
           </div>
         )}
@@ -432,8 +460,8 @@ const PlanButton: React.FC<{
       className="w-4 h-4 mr-2"
     />
     {planCreated
-      ? `Review weekly behavior plan ${weekLabel ? `(${weekLabel})` : ''}`
-      : `Create weekly behavior plan ${weekLabel ? `(${weekLabel})` : ''}`}
+      ? `Review weekly behavior plan ${weekLabel ? `(${weekLabel})` : ""}`
+      : `Create weekly behavior plan ${weekLabel ? `(${weekLabel})` : ""}`}
   </button>
 );
 
@@ -476,7 +504,7 @@ const DayBox: React.FC<{
     {/* recording sessions: blue circles + completion times */}
     {sessions.length > 0 && (
       <div className="mt-1 flex-1 flex flex-col gap-3 justify-center w-full">
-        {sessions.map((session, idx) => (
+        {sessions.map((session, _) => (
           <div
             key={session.sessionId}
             className="flex items-center justify-center border w-full relative group cursor-pointer"

@@ -1,5 +1,5 @@
 // src/lib/firebase.ts
-import { initializeApp } from "firebase/app";
+import { initializeApp, getApp, getApps } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 import { getAuth } from "firebase/auth";
 import { getFunctions } from "firebase/functions";
@@ -15,7 +15,24 @@ const firebaseConfig = {
   measurementId: "G-EH1MSLTF3N"
 };
 
-const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app, 'mobapp'); // Connect to the mobapp database
+// Initialize Firebase app if not already initialized
+let app;
+try {
+  app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
+  console.log('✅ Firebase app initialized');
+} catch (error) {
+  console.error('❌ Firebase initialization failed:', error);
+  throw error;
+}
+
+// Initialize services
+export const db = getFirestore(app, 'mobapp'); // Connect to the 'mobapp' database
 export const auth = getAuth(app);
 export const functions = getFunctions(app);
+
+// Log database info for debugging
+console.log('🔍 Firebase Configuration:', {
+  projectId: firebaseConfig.projectId,
+  authDomain: firebaseConfig.authDomain,
+  databaseURL: `https://${firebaseConfig.projectId}.firebaseio.com`
+});

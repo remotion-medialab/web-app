@@ -23,6 +23,7 @@ export const useRecordings = (userId: string | null): UseRecordingsReturn => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [stats, setStats] = useState<UseRecordingsReturn['stats']>(null);
+  const [isCurrentlyFetching, setIsCurrentlyFetching] = useState(false);
 
   const fetchRecordings = async () => {
     if (!userId) {
@@ -33,18 +34,34 @@ export const useRecordings = (userId: string | null): UseRecordingsReturn => {
       return;
     }
 
+    // Prevent concurrent fetches (React StrictMode protection)
+    if (isCurrentlyFetching) {
+      console.log('🚫 Fetch already in progress, skipping duplicate call');
+      return;
+    }
+
     try {
+      setIsCurrentlyFetching(true);
       setLoading(true);
       setError(null);
 
       console.log('🔄 Fetching recordings for user:', userId);
 
-      // Fetch all data in parallel
-      const [sessionsData, sessionsByDayData, statsData] = await Promise.all([
-        RecordingsService.getUserRecordingSessions(userId),
-        RecordingsService.getUserRecordingsByDay(userId),
-        RecordingsService.getUserRecordingStats(userId),
-      ]);
+      // Fetch sessions once, then derive other data from it
+      const sessionsData = await RecordingsService.getUserRecordingSessions(userId);
+      
+      // Generate sessionsByDay from already-fetched sessions (avoid duplicate fetch)
+      const sessionsByDayData: Record<string, RecordingSession[]> = {};
+      sessionsData.forEach(session => {
+        const dayKey = session.completedAt.toISOString().split('T')[0]; // YYYY-MM-DD
+        if (!sessionsByDayData[dayKey]) {
+          sessionsByDayData[dayKey] = [];
+        }
+        sessionsByDayData[dayKey].push(session);
+      });
+
+      // Generate stats from already-fetched sessions (avoid duplicate fetch)
+      const statsData = RecordingsService.calculateStatsFromSessions(sessionsData);
 
       console.log('✅ Fetched recordings:', {
         sessions: sessionsData.length,
@@ -64,6 +81,7 @@ export const useRecordings = (userId: string | null): UseRecordingsReturn => {
       setStats(null);
     } finally {
       setLoading(false);
+      setIsCurrentlyFetching(false);
     }
   };
 
@@ -72,12 +90,17 @@ export const useRecordings = (userId: string | null): UseRecordingsReturn => {
     fetchRecordings();
   }, [userId]);
 
+  const refetch = async () => {
+    console.log('🔄 Manual refetch requested');
+    await fetchRecordings();
+  };
+
   return {
     sessions,
     sessionsByDay,
     loading,
     error,
-    refetch: fetchRecordings,
+    refetch,
     stats,
   };
 };

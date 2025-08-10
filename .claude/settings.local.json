@@ -1,0 +1,26 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C /Users/mohannedkandil/Desktop/MIT/remotion/mobvrec/vrec status)",
+      "Bash(git -C /Users/mohannedkandil/Desktop/MIT/remotion/mobvrec/vrec remote -v)",
+      "Bash(git -C /Users/mohannedkandil/Desktop/MIT/remotion/mobvrec/vrec commit -m \"Initial mobile app setup with React Native and Firebase integration\")",
+      "Bash(rm:*)",
+      "Bash(git -C /Users/mohannedkandil/Desktop/MIT/remotion/mobvrec/vrec push -u origin main)",
+      "Bash(git -C /Users/mohannedkandil/Desktop/MIT/remotion/mobvrec/vrec pull origin main)",
+      "Bash(git -C /Users/mohannedkandil/Desktop/MIT/remotion/mobvrec/vrec log --oneline -5)",
+      "Bash(git -C /Users/mohannedkandil/Desktop/MIT/remotion/mobvrec/vrec log --oneline origin/main -5)",
+      "Bash(git -C /Users/mohannedkandil/Desktop/MIT/remotion/mobvrec/vrec push --force-with-lease origin main)",
+      "Bash(git -C /Users/mohannedkandil/Desktop/MIT/remotion/mobvrec/vrec reset --hard 793a9be)",
+      "Bash(git -C /Users/mohannedkandil/Desktop/MIT/remotion/mobvrec/vrec fetch origin main)",
+      "Bash(git -C /Users/mohannedkandil/Desktop/MIT/remotion/mobvrec/vrec checkout -b new-mobile-app)",
+      "Bash(git -C /Users/mohannedkandil/Desktop/MIT/remotion/mobvrec/vrec reset --hard 48d9f35)",
+      "Bash(git -C /Users/mohannedkandil/Desktop/MIT/remotion/mobvrec/vrec push --force-with-lease origin 793a9be:main)",
+      "Bash(git -C /Users/mohannedkandil/Desktop/MIT/remotion/mobvrec/vrec checkout main)",
+      "Bash(git -C /Users/mohannedkandil/Desktop/MIT/remotion/mobvrec/vrec checkout new-mobile-app)",
+      "Bash(git -C /Users/mohannedkandil/Desktop/MIT/remotion/mobvrec/vrec rebase main)",
+      "Bash(git -C /Users/mohannedkandil/Desktop/MIT/remotion/mobvrec/vrec rebase --abort)",
+      "Bash(git -C /Users/mohannedkandil/Desktop/MIT/remotion/mobvrec/vrec push -u origin new-mobile-app)"
+    ],
+    "deny": []
+  }
+}
