@@ -425,6 +425,7 @@ const OverviewPage: React.FC = () => {
               }}
               selectedQuestionIndex={selectedQuestionIndex}
               onQuestionSelect={setSelectedQuestionIndex}
+              onRecordingSelect={setSelectedRecording}
             />
           </div>
         )}
@@ -538,8 +539,8 @@ const DayBox: React.FC<{
               </div>
             )}
 
-            {/* Tooltip on hover */}
-            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 mb-2 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-10">
+            {/* Tooltip on hover - positioned relative to the green box */}
+            <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 -mb-1 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
               {session.isComplete
                 ? "✅ Complete session"
                 : "⏳ Partial session"}
@@ -553,6 +554,8 @@ const DayBox: React.FC<{
                   📝 Transcribed
                 </>
               )}
+              {/* Arrow pointing down to the green box */}
+              <div className="absolute top-full left-1/2 transform -translate-x-1/2 w-0 h-0 border-l-2 border-r-2 border-t-2 border-transparent border-t-black"></div>
             </div>
           </div>
         ))}
