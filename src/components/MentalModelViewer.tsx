@@ -106,22 +106,6 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
     useState<Set<number>>(new Set());
   const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlan | null>(null);
 
-  // Debug authentication state
-  useEffect(() => {
-    console.log("🔐 MentalModelViewer Auth Debug:", {
-      userId,
-      user: user
-        ? {
-            uid: user.uid,
-            email: user.email,
-            emailVerified: user.emailVerified,
-            isAnonymous: user.isAnonymous,
-          }
-        : null,
-      sessionRecordingsCount: session.recordings.length,
-    });
-  }, [userId, user, session.recordings.length]);
-
   // Load existing counterfactuals and selections when component mounts or question changes
   useEffect(() => {
     const loadExistingData = async () => {
