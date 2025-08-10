@@ -139,11 +139,22 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
 
             // Load the saved alternative if one exists
             if (existingData.selectedAlternative) {
-              const feasibilityRating = (
-                existingData.selectedAlternative as {
-                  feasibilityRating?: number;
+              // Get the feasibility rating from the humanFeasibilityRating array
+              let feasibilityRating: number | undefined;
+              if (
+                existingData.humanFeasibilityRating &&
+                existingData.humanFeasibilityRating.length >
+                  existingData.selectedAlternative.index
+              ) {
+                const rating =
+                  existingData.humanFeasibilityRating[
+                    existingData.selectedAlternative.index
+                  ];
+                // Only use valid ratings (1-5), ignore -1 (no rating)
+                if (rating >= 1 && rating <= 5) {
+                  feasibilityRating = rating;
                 }
-              ).feasibilityRating;
+              }
 
               setSelectedCounterfactual({
                 index: existingData.selectedAlternative.index,
@@ -275,10 +286,11 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
           prev ? { ...prev, feasibilityRating: rating } : null
         );
 
-        // Save to Firebase for the saved alternative
-        await CounterfactualFirebaseService.saveFeasibilityRating(
+        // Save to Firebase for the specific counterfactual index
+        await CounterfactualFirebaseService.saveHumanFeasibilityRating(
           userId,
           selectedRecording.id,
+          selectedCounterfactual.index,
           rating,
           session.sessionId
         );
@@ -627,7 +639,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
     }
   };
 
-  const handleNodeClick = (node: Node) => {
+  const handleNodeClick = async (node: Node) => {
     if (node.type === "indicator" && node.questionIndex !== undefined) {
       // Handle indicator node click - load and show counterfactuals for this question
       console.log("Clicked indicator for question:", node.questionIndex);
@@ -649,7 +661,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
 
       // The useEffect will automatically load the counterfactuals when selectedQuestionIndex changes
     } else if (node.isCounterfactual && node.text) {
-      // Handle counterfactual node click - just update local state
+      // Handle counterfactual node click - update local state and save to Firebase
       const cfIndex = parseInt(node.id.split("-")[1]); // Extract index from id like "cf-0"
       console.log("Clicked counterfactual:", cfIndex, node.text);
 
@@ -658,6 +670,29 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
         index: cfIndex,
         text: node.text!,
       });
+
+      // Save the selected counterfactual to Firebase
+      if (userId && selectedQuestionIndex !== undefined) {
+        const selectedRecording = session.recordings.find(
+          (r) => r.stepNumber === selectedQuestionIndex
+        );
+
+        if (selectedRecording) {
+          try {
+            await CounterfactualFirebaseService.saveSelectedCounterfactual(
+              userId,
+              selectedRecording.id,
+              cfIndex,
+              node.text,
+              session.sessionId
+            );
+            console.log("✅ Selected counterfactual saved to Firebase");
+          } catch (error) {
+            console.error("❌ Failed to save selected counterfactual:", error);
+            toast.error("Failed to save selection. Please try again.");
+          }
+        }
+      }
     } else if (node.questionIndex !== undefined && onQuestionSelect) {
       onQuestionSelect(node.questionIndex);
 
@@ -901,7 +936,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
                   zIndex: 2,
                 }}
                 title={getNodeTitle(node)}
-                onClick={() => handleNodeClick(node)}
+                onClick={() => handleNodeClick(node).catch(console.error)}
               />
             );
           })}
