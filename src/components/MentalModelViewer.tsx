@@ -670,29 +670,6 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
         index: cfIndex,
         text: node.text!,
       });
-
-      // Save the selected counterfactual to Firebase
-      if (userId && selectedQuestionIndex !== undefined) {
-        const selectedRecording = session.recordings.find(
-          (r) => r.stepNumber === selectedQuestionIndex
-        );
-
-        if (selectedRecording) {
-          try {
-            await CounterfactualFirebaseService.saveSelectedCounterfactual(
-              userId,
-              selectedRecording.id,
-              cfIndex,
-              node.text,
-              session.sessionId
-            );
-            console.log("✅ Selected counterfactual saved to Firebase");
-          } catch (error) {
-            console.error("❌ Failed to save selected counterfactual:", error);
-            toast.error("Failed to save selection. Please try again.");
-          }
-        }
-      }
     } else if (node.questionIndex !== undefined && onQuestionSelect) {
       onQuestionSelect(node.questionIndex);
 
