@@ -173,7 +173,7 @@ const OverviewPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4">
+    <div className="min-h-screen bg-gray-50 p-4 flex justify-center items-center">
       {/* Main white card container */}
       <div
         className={`h-full w-full bg-white border rounded-lg p-6 flex ${

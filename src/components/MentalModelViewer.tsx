@@ -690,176 +690,294 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
     }
   };
 
-  const handleGenerateAllMissingAlternatives = async () => {
+  
+  // const handleGenerateAllMissingAlternatives_disable = async () => {
+  //   if (!userId) {
+  //     toast.error("Please sign in to generate alternatives!");
+  //     return;
+  //   }
+
+  //   // Find questions that don't have counterfactuals (excluding question 0 - situation description)
+  //   const questionsWithoutCounterfactuals: number[] = [];
+  //   for (let i = 0; i < NUM_QUESTIONS; i++) {
+  //     if (i !== 0 && !questionsWithCounterfactuals.has(i)) {
+  //       questionsWithoutCounterfactuals.push(i);
+  //     }
+  //   }
+
+  //   if (questionsWithoutCounterfactuals.length === 0) {
+  //     toast.success("All questions already have alternatives generated!");
+  //     return;
+  //   }
+
+  //   setIsGenerating(true);
+  //   let successCount = 0;
+  //   let errorCount = 0;
+
+  //   try {
+  //     // Get all transcriptions first
+  //     const questionResponses: string[] = [];
+  //     for (let i = 0; i < NUM_QUESTIONS; i++) {
+  //       const recording = session.recordings.find((r) => r.stepNumber === i);
+  //       const transcription = recording?.transcription?.text || "";
+  //       questionResponses.push(transcription);
+  //     }
+
+  //     // Check if we have any actual transcriptions
+  //     const hasTranscriptions = questionResponses.some(
+  //       (response) => response.trim().length > 0
+  //     );
+
+  //     if (!hasTranscriptions) {
+  //       toast.error(
+  //         `No transcriptions available. Please ensure all ${NUM_QUESTIONS} questions have been recorded and transcribed before generating counterfactuals.`
+  //       );
+  //       setIsGenerating(false);
+  //       return;
+  //     }
+
+  //     // Generate counterfactuals for each missing question
+  //     for (const questionIndex of questionsWithoutCounterfactuals) {
+  //       try {
+  //         console.log(
+  //           `Generating alternatives for question ${questionIndex}...`
+  //         );
+
+  //         const requestData = {
+  //           text: questionResponses.join("\n"),
+  //           metadata: {
+  //             sessionId: session.sessionId,
+  //             userId: userId,
+  //             questions: questionResponses.map((response, index) => ({
+  //               stepNumber: index,
+  //               question: RECORDING_QUESTIONS[index],
+  //               transcription: response,
+  //               recordingId: session.recordings.find(
+  //                 (r) => r.stepNumber === index
+  //               )?.id,
+  //             })),
+  //             weeklyPlan: weeklyPlan
+  //               ? {
+  //                   idealWeek: weeklyPlan.responses.idealWeek,
+  //                   obstacles: weeklyPlan.responses.obstacles,
+  //                   preventActions: weeklyPlan.responses.preventActions,
+  //                   actionDetails: weeklyPlan.responses.actionDetails,
+  //                   ifThenPlans: weeklyPlan.responses.ifThenPlans,
+  //                   weekStartDate: weeklyPlan.weekStartDate,
+  //                   weekEndDate: weeklyPlan.weekEndDate,
+  //                 }
+  //               : null,
+  //             selectedQuestionIndex: questionIndex,
+  //             timestamp: new Date().toISOString(),
+  //           },
+  //         };
+
+  //         const API_BASE_URL =
+  //           import.meta.env.VITE_COUNTERFACTUAL_API_URL ||
+  //           (import.meta.env.DEV
+  //             ? "http://localhost:8000"
+  //             : "https://coping-counterfactual.fly.dev");
+
+  //         const response = await fetch(`${API_BASE_URL}/counterfactual`, {
+  //           method: "POST",
+  //           headers: {
+  //             "Content-Type": "application/json",
+  //           },
+  //           body: JSON.stringify(requestData),
+  //         });
+
+  //         if (!response.ok) {
+  //           throw new Error(`API request failed: ${response.statusText}`);
+  //         }
+
+  //         const data = await response.json();
+
+  //         if (data.counterfactuals && data.counterfactuals.length > 0) {
+  //           const allCounterfactuals = data.counterfactuals
+  //             .map((cf: string) => cf)
+  //             .slice(0, NUM_COUNTERFACTUALS);
+
+  //           // Save to Firebase
+  //           const selectedRecording = session.recordings.find(
+  //             (r) => r.stepNumber === questionIndex
+  //           );
+
+  //           if (selectedRecording && userId) {
+  //             await CounterfactualFirebaseService.saveCounterfactuals(
+  //               userId,
+  //               selectedRecording.id,
+  //               questionIndex,
+  //               allCounterfactuals,
+  //               session.sessionId,
+  //               questionResponses[questionIndex],
+  //               data.cfLogs
+  //             );
+  //             successCount++;
+  //             console.log(
+  //               `✅ Generated alternatives for question ${questionIndex}`
+  //             );
+  //           }
+  //         }
+  //       } catch (error) {
+  //         console.error(
+  //           `❌ Failed to generate alternatives for question ${questionIndex}:`,
+  //           error
+  //         );
+  //         errorCount++;
+  //       }
+  //     }
+
+  //     // Update the questions with counterfactuals state
+  //     if (successCount > 0) {
+  //       setQuestionsWithCounterfactuals(
+  //         (prev) =>
+  //           new Set([
+  //             ...prev,
+  //             ...questionsWithoutCounterfactuals.slice(0, successCount),
+  //           ])
+  //       );
+  //     }
+
+  //     // Show results
+  //     if (successCount > 0 && errorCount === 0) {
+  //       toast.success(
+  //         `Successfully generated alternatives for ${successCount} question${
+  //           successCount > 1 ? "s" : ""
+  //         }! (Situation description excluded)`
+  //       );
+  //     } else if (successCount > 0 && errorCount > 0) {
+  //       toast.success(
+  //         `Generated alternatives for ${successCount} question${
+  //           successCount > 1 ? "s" : ""
+  //         }, ${errorCount} failed. (Situation description excluded)`
+  //       );
+  //     } else if (errorCount > 0) {
+  //       toast.error(
+  //         `Failed to generate alternatives for ${errorCount} question${
+  //           errorCount > 1 ? "s" : ""
+  //         }.`
+  //       );
+  //     }
+  //   } catch (error) {
+  //     console.error("Error in bulk generation:", error);
+  //     toast.error("Error generating alternatives. Please try again.");
+  //   } finally {
+  //     setIsGenerating(false);
+  //   }
+  // };
+  
+  const handleGenerateAllAlternatives = async () => {
     if (!userId) {
       toast.error("Please sign in to generate alternatives!");
       return;
     }
 
-    // Find questions that don't have counterfactuals (excluding question 0 - situation description)
-    const questionsWithoutCounterfactuals: number[] = [];
-    for (let i = 0; i < NUM_QUESTIONS; i++) {
-      if (i !== 0 && !questionsWithCounterfactuals.has(i)) {
-        questionsWithoutCounterfactuals.push(i);
-      }
-    }
-
-    if (questionsWithoutCounterfactuals.length === 0) {
-      toast.success("All questions already have alternatives generated!");
-      return;
-    }
-
     setIsGenerating(true);
-    let successCount = 0;
-    let errorCount = 0;
 
     try {
-      // Get all transcriptions first
-      const questionResponses: string[] = [];
-      for (let i = 0; i < NUM_QUESTIONS; i++) {
-        const recording = session.recordings.find((r) => r.stepNumber === i);
-        const transcription = recording?.transcription?.text || "";
-        questionResponses.push(transcription);
-      }
-
-      // Check if we have any actual transcriptions
-      const hasTranscriptions = questionResponses.some(
-        (response) => response.trim().length > 0
-      );
-
-      if (!hasTranscriptions) {
-        toast.error(
-          `No transcriptions available. Please ensure all ${NUM_QUESTIONS} questions have been recorded and transcribed before generating counterfactuals.`
+      // Prepare all API requests in parallel for all questions (excluding question 0)
+      const requests = Array.from({ length: NUM_QUESTIONS - 1 }, (_, i) => i + 1).map((questionIndex) => {
+        const recording = session.recordings.find(
+          (r) => r.stepNumber === questionIndex
         );
-        setIsGenerating(false);
-        return;
-      }
+        const transcription = recording?.transcription?.text || "";
 
-      // Generate counterfactuals for each missing question
-      for (const questionIndex of questionsWithoutCounterfactuals) {
-        try {
-          console.log(
-            `Generating alternatives for question ${questionIndex}...`
+        if (!transcription.trim()) {
+          console.warn(
+            `Skipping question ${questionIndex} due to missing transcription.`
           );
+          return Promise.resolve(null);
+        }
 
-          const requestData = {
-            text: questionResponses.join("\n"),
-            metadata: {
-              sessionId: session.sessionId,
-              userId: userId,
-              questions: questionResponses.map((response, index) => ({
-                stepNumber: index,
-                question: RECORDING_QUESTIONS[index],
-                transcription: response,
-                recordingId: session.recordings.find(
-                  (r) => r.stepNumber === index
-                )?.id,
-              })),
-              weeklyPlan: weeklyPlan
-                ? {
-                    idealWeek: weeklyPlan.responses.idealWeek,
-                    obstacles: weeklyPlan.responses.obstacles,
-                    preventActions: weeklyPlan.responses.preventActions,
-                    actionDetails: weeklyPlan.responses.actionDetails,
-                    ifThenPlans: weeklyPlan.responses.ifThenPlans,
-                    weekStartDate: weeklyPlan.weekStartDate,
-                    weekEndDate: weeklyPlan.weekEndDate,
-                  }
-                : null,
-              selectedQuestionIndex: questionIndex,
-              timestamp: new Date().toISOString(),
-            },
-          };
+        const requestData = {
+          text: transcription,
+          metadata: {
+            sessionId: session.sessionId,
+            userId: userId,
+            questions: [
+              {
+                stepNumber: questionIndex,
+                question: RECORDING_QUESTIONS[questionIndex],
+                transcription: transcription,
+                recordingId: recording?.id,
+              },
+            ],
+            weeklyPlan: weeklyPlan
+              ? {
+                  idealWeek: weeklyPlan.responses.idealWeek,
+                  obstacles: weeklyPlan.responses.obstacles,
+                  preventActions: weeklyPlan.responses.preventActions,
+                  actionDetails: weeklyPlan.responses.actionDetails,
+                  ifThenPlans: weeklyPlan.responses.ifThenPlans,
+                  weekStartDate: weeklyPlan.weekStartDate,
+                  weekEndDate: weeklyPlan.weekEndDate,
+                }
+              : null,
+            selectedQuestionIndex: questionIndex,
+            timestamp: new Date().toISOString(),
+          },
+        };
 
-          const API_BASE_URL =
-            import.meta.env.VITE_COUNTERFACTUAL_API_URL ||
-            (import.meta.env.DEV
-              ? "http://localhost:8000"
-              : "https://coping-counterfactual.fly.dev");
+        const API_BASE_URL =
+          import.meta.env.VITE_COUNTERFACTUAL_API_URL ||
+          (import.meta.env.DEV
+            ? "http://localhost:8000"
+            : "https://coping-counterfactual.fly.dev");
 
-          const response = await fetch(`${API_BASE_URL}/counterfactual`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(requestData),
-          });
-
-          if (!response.ok) {
-            throw new Error(`API request failed: ${response.statusText}`);
-          }
-
-          const data = await response.json();
-
-          if (data.counterfactuals && data.counterfactuals.length > 0) {
-            const allCounterfactuals = data.counterfactuals
-              .map((cf: string) => cf)
-              .slice(0, NUM_COUNTERFACTUALS);
+        return fetch(`${API_BASE_URL}/counterfactual`, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(requestData),
+        })
+          .then(async (response) => {
+            if (!response.ok) {
+              throw new Error(`API request failed: ${response.statusText}`);
+            }
+            const data = await response.json();
 
             // Save to Firebase
-            const selectedRecording = session.recordings.find(
-              (r) => r.stepNumber === questionIndex
-            );
-
-            if (selectedRecording && userId) {
+            if (recording && userId) {
               await CounterfactualFirebaseService.saveCounterfactuals(
                 userId,
-                selectedRecording.id,
+                recording.id,
                 questionIndex,
-                allCounterfactuals,
+                data.counterfactuals.slice(0, NUM_COUNTERFACTUALS),
                 session.sessionId,
-                questionResponses[questionIndex],
+                transcription,
                 data.cfLogs
               );
-              successCount++;
-              console.log(
-                `✅ Generated alternatives for question ${questionIndex}`
-              );
             }
-          }
-        } catch (error) {
-          console.error(
-            `❌ Failed to generate alternatives for question ${questionIndex}:`,
-            error
-          );
-          errorCount++;
-        }
-      }
 
-      // Update the questions with counterfactuals state
-      if (successCount > 0) {
-        setQuestionsWithCounterfactuals(
-          (prev) =>
-            new Set([
-              ...prev,
-              ...questionsWithoutCounterfactuals.slice(0, successCount),
-            ])
-        );
-      }
+            return questionIndex; // Return the successfully processed question index
+          })
+          .catch((error) => {
+            console.error(
+              `❌ Failed to generate alternatives for question ${questionIndex}:`,
+              error
+            );
+            return null; // Return null for failed requests
+          });
+      });
 
-      // Show results
-      if (successCount > 0 && errorCount === 0) {
-        toast.success(
-          `Successfully generated alternatives for ${successCount} question${
-            successCount > 1 ? "s" : ""
-          }! (Situation description excluded)`
-        );
-      } else if (successCount > 0 && errorCount > 0) {
-        toast.success(
-          `Generated alternatives for ${successCount} question${
-            successCount > 1 ? "s" : ""
-          }, ${errorCount} failed. (Situation description excluded)`
-        );
-      } else if (errorCount > 0) {
-        toast.error(
-          `Failed to generate alternatives for ${errorCount} question${
-            errorCount > 1 ? "s" : ""
-          }.`
-        );
-      }
+      // Wait for all requests to complete
+      const results = await Promise.all(requests);
+
+      // Update state
+      const successfulQuestions = results.filter(
+        (result): result is number => result !== null
+      );
+      setQuestionsWithCounterfactuals(
+        (prev) => new Set([...prev, ...successfulQuestions])
+      );
+
+      toast.success(
+        `Generated alternatives for ${successfulQuestions.length} question(s)!`
+      );
     } catch (error) {
-      console.error("Error in bulk generation:", error);
-      toast.error("Error generating alternatives. Please try again.");
+      console.error("Error generating all alternatives:", error);
+      toast.error("Failed to generate all alternatives. Please try again.");
     } finally {
       setIsGenerating(false);
     }
@@ -1120,14 +1238,24 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
     <div className="w-full h-full bg-white border rounded-lg flex flex-col">
       {/* Header */}
       <div className="flex justify-between items-start p-6 border-b">
-        <div>
+        <div className="flex-1 min-w-[400px]">
           <h2 className="text-xl font-semibold" style={{ color: "#545454" }}>
             Mental Model Viewer
           </h2>
           <p className="text-sm" style={{ color: "#b0b0b0" }}>
             Interactive mind map - Click circles to select questions
           </p>
-          {/* Selected and debug info hidden */}
+        </div>
+        <div className="flex justify-end items-center w-full pr-3">
+          {/* Generate All Counterfactuals */}
+          <button
+            onClick={handleGenerateAllAlternatives}
+            disabled={isGenerating || !userId}
+            className="flex items-center gap-2 px-4 py-1 text-white border-1 border-black-600 rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+          >
+            <span className="text-lg">🚀</span>
+            {isGenerating && "Generating..."}
+          </button>
         </div>
         <button
           onClick={onClose}
@@ -1257,9 +1385,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
           </div>
         </div>
       )}
-
-      {/* Footer with Generate Buttons */}
-      <div className="p-6 border-t flex flex-col items-center space-y-3">
+      <div className="p-6 border-t flex flex-col items-center space-y-15">
         <div className="flex flex-col items-center space-y-2">
           <button
             onClick={handleGenerateAlternatives}
@@ -1293,7 +1419,26 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
           )}
         </div>
 
-        <div className="flex flex-col items-center space-y-2">
+        {/* <div className="flex flex-col items-center space-y-2">
+                    <button
+            onClick={handleGenerateAllAlternatives}
+            disabled={
+              isGenerating ||
+              selectedQuestionIndex === undefined ||
+              selectedQuestionIndex === 0
+            }
+            className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-300 rounded-full hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            style={{ color: "#545454" }}
+          >
+            <span className="text-lg">✨</span>
+            {isGenerating
+              ? "Generating..."
+              : selectedQuestionIndex === 0
+              ? "Not available for situation description"
+              : 'Generate "What if..." alternatives'}
+          </button>
+        </div> */}
+        {/* <div className="flex flex-col items-center space-y-2">
           <button
             onClick={handleGenerateAllMissingAlternatives}
             disabled={
@@ -1321,7 +1466,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
               (situation description excluded)
             </p>
           )}
-        </div>
+        </div> */}
         {showCounterfactuals && counterfactuals.length > 0 && (
           <p className="text-xs" style={{ color: "#3B82F6" }}>
             {counterfactuals.length} alternatives generated around selected
