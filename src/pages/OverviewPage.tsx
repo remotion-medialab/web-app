@@ -16,11 +16,44 @@ const dayHeaders = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 // prompts for the Weekly Plan textarea fields
 const prompts = [
-  "This week, how would your ideal week look like?",
-  "What are the biggest obstacles that would prevent you from having it that way?",
-  "What would you have to do to prevent or overcome those obstacles?",
-  "Further expand on these actions. When would it be done? With who? Where?",
-  'Write down as many "If-Then" behavior plans (i.e. “If situation X arises, then I will do Y.”)',
+  {
+    main: "What is the overall target scenario you want to improve over the next week? Describe it concretely — where it happens, who’s involved, and what’s currently challenging.",
+    subPrompts: [
+      "Is this work-related or personal?",
+    ],
+  },
+  {
+    main: "In this scenario, what is one obstacle you might face when trying to change the situation to make it easier for yourself?",
+    subPrompts: [
+      "If you succeed at changing the situation, what will that look like and feel like?",
+      "What specifically could get in the way?",
+      "Please write in as detailed as possible in format If [obstacle], then [specific action], separate by ;.",
+    ],
+  },
+  {
+    main: "In this scenario, what is one obstacle you might face when trying to direct your attention to helpful things?",
+    subPrompts: [
+      "If you succeed at changing the situation, what will that look like and feel like?",
+      "What specifically could get in the way?",
+      "Please write in as detailed as possible in format If [obstacle], then [specific action], separate by ;.",
+    ],
+  },
+  {
+    main: "What is one obstacle you might face when trying to reframe or reinterpret events in a more helpful way?",
+    subPrompts: [
+      "If you succeed at changing the situation, what will that look like and feel like?",
+      "What specifically could get in the way?",
+      "Please write in as detailed as possible in format If [obstacle], then [specific action], separate by ;.",
+    ],
+  },
+  {
+    main: "What is one obstacle you might face when trying to regulate your emotional or behavioral response?",
+    subPrompts: [
+      "If you succeed at changing the situation, what will that look like and feel like?",
+      "What specifically could get in the way?",
+      "Please write in as detailed as possible in format If [obstacle], then [specific action], separate by ;.",
+    ],
+  },
 ];
 
 const OverviewPage: React.FC = () => {
@@ -39,13 +72,19 @@ const OverviewPage: React.FC = () => {
   const [currentWeekPlan, setCurrentWeekPlan] = useState<WeeklyPlan | null>(
     null
   );
-  const [formData, setFormData] = useState<WeeklyPlanFormData>({
-    idealWeek: "",
-    obstacles: "",
-    preventActions: "",
-    actionDetails: "",
-    ifThenPlans: "",
-  });
+  const [formData, setFormData] = useState<Record<string, string>>({});
+
+  // const [formData, setFormData] = useState<WeeklyPlanFormData>({
+  //   idealWeek: "",
+  //   obstacles: "",
+  //   obstacleModification: "",
+  //   obstacleAttention: "",
+  //   obstacleInterpretation: "",
+  //   obstacleReaction: "",
+  //   preventActions: "",
+  //   actionDetails: "",
+  //   ifThenPlans: "",
+  // });
   const [isSaving, setIsSaving] = useState(false);
 
   // Auth and recordings data
@@ -71,22 +110,24 @@ const OverviewPage: React.FC = () => {
     setIsSaving(true);
     try {
       const currentWeekDate = addDays(today, weekOffset * 7);
+
+      // Prepare the data to save
+      const responses = prompts.map((prompt, idx) => ({
+        main: formData[`main_${idx}`] || "", // Main prompt response
+        subPrompts: prompt.subPrompts.map(
+          (_, subIdx) => formData[`sub_${idx}_${subIdx}`] || "" // Sub-prompt responses
+        ),
+      }));
+
+      // Log the responses to verify structure
+      console.log("Saving responses:", responses);
+      
+      // Save the weekly plan with the responses
       const savedPlan = await WeeklyPlanService.saveWeeklyPlan(
         userId,
-        formData,
+        { responses }, // Pass the structured responses
         currentWeekDate
       );
-
-      // Associate current week's sessions with the plan
-      const currentWeekSessions = getCurrentWeekSessions();
-      const sessionIds = currentWeekSessions.map((s) => s.sessionId);
-      if (sessionIds.length > 0) {
-        await WeeklyPlanService.associateSessionsWithPlan(
-          userId,
-          sessionIds,
-          currentWeekDate
-        );
-      }
 
       setCurrentWeekPlan(savedPlan);
       setPlanCreated(true);
@@ -99,8 +140,49 @@ const OverviewPage: React.FC = () => {
     }
   };
 
-  const handleFormChange = (field: keyof WeeklyPlanFormData, value: string) => {
-    setFormData((prev) => ({ ...prev, [field]: value }));
+
+  // WHEN NO SUBPROMPTS ARE USED
+  // const handleSave = async () => {
+  //   if (!userId) return;
+
+  //   setIsSaving(true);
+  //   try {
+  //     const currentWeekDate = addDays(today, weekOffset * 7);
+  //     const savedPlan = await WeeklyPlanService.saveWeeklyPlan(
+  //       userId,
+  //       formData,
+  //       currentWeekDate
+  //     );
+
+  //     // Associate current week's sessions with the plan
+  //     const currentWeekSessions = getCurrentWeekSessions();
+  //     const sessionIds = currentWeekSessions.map((s) => s.sessionId);
+  //     if (sessionIds.length > 0) {
+  //       await WeeklyPlanService.associateSessionsWithPlan(
+  //         userId,
+  //         sessionIds,
+  //         currentWeekDate
+  //       );
+  //     }
+
+  //     setCurrentWeekPlan(savedPlan);
+  //     setPlanCreated(true);
+  //     alert("Weekly behavior plan saved successfully!");
+  //   } catch (error) {
+  //     console.error("Error saving weekly plan:", error);
+  //     alert("Failed to save weekly plan. Please try again.");
+  //   } finally {
+  //     setIsSaving(false);
+  //   }
+  // };
+
+  // WHEN NO SUBPROMPTS ARE USED
+  // const handleFormChange = (field: keyof WeeklyPlanFormData, value: string) => {
+  //   setFormData((prev) => ({ ...prev, [field]: value }));
+  // };
+
+  const handleFormChange = (field: string, value: string) => {
+  setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
   const getCurrentWeekSessions = (): RecordingSession[] => {
@@ -359,11 +441,64 @@ const OverviewPage: React.FC = () => {
                 </p>
 
                 {/* prompts + textareas */}
+                <div className="flex-1 space-y-6 overflow-y-auto">
+                  {prompts.map((prompt, idx) => (
+                    <div key={idx} className="flex flex-col space-y-4">
+                      {/* Main Prompt */}
+                      <div>
+                        <label
+                          className="text-sm font-medium mb-1"
+                          style={{ color: "#545454" }}
+                        >
+                          {prompt.main}
+                        </label>
+                        <textarea
+                          className="border rounded p-2 text-sm w-full"
+                          rows={3}
+                          style={{ borderColor: "#d4d4d4", color: "#545454" }}
+                          value={formData[`main_${idx}`] || ""}
+                          onChange={(e) =>
+                            handleFormChange(`main_${idx}` as keyof WeeklyPlanFormData, e.target.value)
+                          }
+                          placeholder="Enter your response to the main question"
+                        />
+                      </div>
+
+                      {/* Sub-Prompts */}
+                      {prompt.subPrompts.map((subPrompt, subIdx) => (
+                        <div key={subIdx} className="ml-4">
+                          <label
+                            className="text-sm font-medium mb-1"
+                            style={{ color: "#545454" }}
+                          >
+                            {subPrompt}
+                          </label>
+                          <textarea
+                            className="border rounded p-2 text-sm w-full"
+                            rows={2}
+                            style={{ borderColor: "#d4d4d4", color: "#545454" }}
+                            value={formData[`sub_${idx}_${subIdx}`] || ""}
+                            onChange={(e) =>
+                              handleFormChange(`sub_${idx}_${subIdx}` as keyof WeeklyPlanFormData, e.target.value)
+                            }
+                            placeholder="Enter your response to the sub-question"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  ))}
+                </div>
+
+                {/* prompts + textareas FOR NO SUBPROMPTS
                 <div className="flex-1 space-y-4 overflow-y-auto">
                   {prompts.map((prompt, idx) => {
                     const fieldNames: (keyof WeeklyPlanFormData)[] = [
                       "idealWeek",
                       "obstacles",
+                      "obstacleModification"
+                      "obstacleInterpretation"
+                      "obstacleAttention",
+                      "obstacleReaction"
                       "preventActions",
                       "actionDetails",
                       "ifThenPlans",
@@ -391,7 +526,7 @@ const OverviewPage: React.FC = () => {
                       </div>
                     );
                   })}
-                </div>
+                </div> */}
 
                 {/* save button */}
                 <button
