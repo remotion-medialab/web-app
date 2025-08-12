@@ -413,7 +413,14 @@ const OverviewPage: React.FC = () => {
                     format(date, "yyyy-MM-dd") === format(today, "yyyy-MM-dd")
                   }
                   showPlan={showPlan || !!selectedSession}
-                  onSessionClick={setSelectedSession}
+                  onSessionClick={(session) => {
+                    setSelectedSession(session);
+                    // Unselect weekly plan when a recording is clicked
+                    if (showPlan) {
+                      setShowPlan(false);
+                      setSelectedWeekOffset(null);
+                    }
+                  }}
                 />
               ))}
 
@@ -438,7 +445,14 @@ const OverviewPage: React.FC = () => {
                   date={addDays(date, 7)}
                   sessions={getSessionsForDate(addDays(date, 7))}
                   showPlan={showPlan || !!selectedSession}
-                  onSessionClick={setSelectedSession}
+                  onSessionClick={(session) => {
+                    setSelectedSession(session);
+                    // Unselect weekly plan when a recording is clicked
+                    if (showPlan) {
+                      setShowPlan(false);
+                      setSelectedWeekOffset(null);
+                    }
+                  }}
                 />
               ))}
               {/* button under bottom week */}
