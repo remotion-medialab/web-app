@@ -147,8 +147,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
     text: string;
     feasibilityRating?: number;
   } | null>(null);
-  const [questionsWithCounterfactuals, setQuestionsWithCounterfactuals] =
-    useState<Set<number>>(new Set());
+  const [, setQuestionsWithCounterfactuals] = useState<Set<number>>(new Set());
   const [weeklyPlan, setWeeklyPlan] = useState<WeeklyPlan | null>(null);
 
   // Load existing counterfactuals and selections when component mounts or question changes

@@ -318,7 +318,7 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                   <div className="flex items-center justify-between">
                     <p className="italic text-red-500">Transcription failed</p>
                     <button
-                      onClick={() => retryTranscription(recording)}
+                      onClick={() => retryTranscription(recording as any)}
                       disabled={retryingTranscriptions.has(recording.id)}
                       className="ml-2 px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
@@ -348,7 +348,11 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                     <div
                       className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center cursor-pointer hover:bg-gray-300 transition-colors"
                       onClick={(e) =>
-                        handlePlayToggle(e, recording.id, recording.audioUri)
+                        handlePlayToggle(
+                          e,
+                          recording.id,
+                          recording.audioUri as string
+                        )
                       }
                       title={
                         currentlyPlayingId === recording.id ? "Pause" : "Play"
