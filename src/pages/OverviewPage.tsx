@@ -465,15 +465,41 @@ const OverviewPage: React.FC = () => {
           >
             {showPlan ? (
               <>
-                <h2
-                  className="text-lg font-semibold"
-                  style={{ color: "#545454" }}
-                >
-                  Weekly Plan
-                </h2>
-                <p className="text-sm mb-4" style={{ color: "#b0b0b0" }}>
-                  Create your weekly behavior plan
-                </p>
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h2
+                      className="text-lg font-semibold"
+                      style={{ color: "#545454" }}
+                    >
+                      Weekly Plan
+                    </h2>
+                    <p className="text-sm" style={{ color: "#b0b0b0" }}>
+                      Create your weekly behavior plan
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowPlan(false);
+                      setSelectedWeekOffset(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                    title="Close weekly plan"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
 
                 {/* prompts + textareas */}
                 <div className="flex-1 space-y-4 overflow-y-auto">
