@@ -25,7 +25,9 @@ const prompts = [
 
 const OverviewPage: React.FC = () => {
   const [showPlan, setShowPlan] = useState(false); // whether right-side panel is shown
-  const [planCreated, setPlanCreated] = useState(false); // if plan was saved
+  const [selectedWeekOffset, setSelectedWeekOffset] = useState<number | null>(
+    null
+  ); // which week's plan is selected
   const [weekOffset, setWeekOffset] = useState(0); // current week offset (for arrows)
   const [selectedSession, setSelectedSession] =
     useState<RecordingSession | null>(null);
@@ -38,6 +40,9 @@ const OverviewPage: React.FC = () => {
   >(undefined);
   const [currentWeekPlan, setCurrentWeekPlan] = useState<WeeklyPlan | null>(
     null
+  );
+  const [weeklyPlans, setWeeklyPlans] = useState<Map<string, WeeklyPlan>>(
+    new Map()
   );
   const [formData, setFormData] = useState<WeeklyPlanFormData>({
     idealWeek: "",
@@ -63,33 +68,49 @@ const OverviewPage: React.FC = () => {
     return sessionsByDay[dateKey] || [];
   };
 
-  const handlePlanButton = () => setShowPlan(!showPlan);
+  const handlePlanButton = (weekOffsetForPlan: number) => {
+    if (selectedWeekOffset === weekOffsetForPlan && showPlan) {
+      // If clicking the same week's button and plan is shown, hide it
+      setShowPlan(false);
+      setSelectedWeekOffset(null);
+    } else {
+      // Show plan for the selected week
+      setSelectedWeekOffset(weekOffsetForPlan);
+      setShowPlan(true);
+    }
+  };
 
   const handleSave = async () => {
-    if (!userId) return;
+    if (!userId || selectedWeekOffset === null) return;
 
     setIsSaving(true);
     try {
-      const currentWeekDate = addDays(today, weekOffset * 7);
+      const selectedWeekDate = addDays(today, selectedWeekOffset * 7);
       const savedPlan = await WeeklyPlanService.saveWeeklyPlan(
         userId,
         formData,
-        currentWeekDate
+        selectedWeekDate
       );
 
-      // Associate current week's sessions with the plan
-      const currentWeekSessions = getCurrentWeekSessions();
-      const sessionIds = currentWeekSessions.map((s) => s.sessionId);
+      // Associate selected week's sessions with the plan
+      const selectedWeekSessions = getSessionsForWeek(selectedWeekOffset);
+      const sessionIds = selectedWeekSessions.map((s) => s.sessionId);
       if (sessionIds.length > 0) {
         await WeeklyPlanService.associateSessionsWithPlan(
           userId,
           sessionIds,
-          currentWeekDate
+          selectedWeekDate
         );
       }
 
       setCurrentWeekPlan(savedPlan);
-      setPlanCreated(true);
+
+      // Store the plan in our weeklyPlans map
+      const weekStart = startOfWeek(selectedWeekDate, { weekStartsOn: 1 });
+      const weekKey = format(weekStart, "yyyy-MM-dd");
+      setWeeklyPlans((prev) => new Map(prev).set(weekKey, savedPlan));
+      console.log("💾 Saved plan for week:", weekKey, savedPlan);
+
       alert("Weekly behavior plan saved successfully!");
     } catch (error) {
       console.error("Error saving weekly plan:", error);
@@ -103,11 +124,19 @@ const OverviewPage: React.FC = () => {
     setFormData((prev) => ({ ...prev, [field]: value }));
   };
 
-  const getCurrentWeekSessions = (): RecordingSession[] => {
-    const currentWeekDates = weekDates;
+  const getSessionsForWeek = (
+    weekOffsetForPlan: number
+  ): RecordingSession[] => {
+    const weekStart = addDays(
+      startOfWeek(addDays(today, weekOffsetForPlan * 7)),
+      0
+    );
+    const weekDatesForPlan = Array.from({ length: 7 }, (_, i) =>
+      addDays(weekStart, i)
+    );
     const allSessionsThisWeek: RecordingSession[] = [];
 
-    currentWeekDates.forEach((date) => {
+    weekDatesForPlan.forEach((date) => {
       const sessionsForDate = getSessionsForDate(date);
       allSessionsThisWeek.push(...sessionsForDate);
     });
@@ -115,10 +144,27 @@ const OverviewPage: React.FC = () => {
     return allSessionsThisWeek;
   };
 
-  // Load current week plan on component mount and when week changes
+  const getCurrentWeekSessions = (): RecordingSession[] => {
+    return getSessionsForWeek(weekOffset);
+  };
+
+  // Check if a plan exists for a specific week
+  const hasPlanForWeek = (weekOffsetForPlan: number): boolean => {
+    const weekDate = addDays(today, weekOffsetForPlan * 7);
+    const weekStart = startOfWeek(weekDate, { weekStartsOn: 1 });
+    const weekKey = format(weekStart, "yyyy-MM-dd");
+    const hasPlan = weeklyPlans.has(weekKey);
+    console.log(
+      `🔍 Checking plan for week ${weekOffsetForPlan} (${weekKey}):`,
+      hasPlan
+    );
+    return hasPlan;
+  };
+
+  // Load current week plan on component mount and when week changes (only if no plan is currently selected)
   useEffect(() => {
     const loadCurrentWeekPlan = async () => {
-      if (!userId) return;
+      if (!userId || showPlan) return; // Don't load if a plan is currently being shown
 
       try {
         const currentWeekDate = addDays(today, weekOffset * 7);
@@ -129,11 +175,14 @@ const OverviewPage: React.FC = () => {
 
         if (plan) {
           setCurrentWeekPlan(plan);
-          setPlanCreated(true);
           setFormData(plan.responses);
+
+          // Store the plan in our weeklyPlans map
+          const weekStart = startOfWeek(currentWeekDate, { weekStartsOn: 1 });
+          const weekKey = format(weekStart, "yyyy-MM-dd");
+          setWeeklyPlans((prev) => new Map(prev).set(weekKey, plan));
         } else {
           setCurrentWeekPlan(null);
-          setPlanCreated(false);
           setFormData({
             idealWeek: "",
             obstacles: "",
@@ -148,7 +197,91 @@ const OverviewPage: React.FC = () => {
     };
 
     loadCurrentWeekPlan();
+  }, [userId, weekOffset, showPlan]);
+
+  // Load plans for visible weeks (current week and next week)
+  useEffect(() => {
+    const loadVisibleWeekPlans = async () => {
+      if (!userId) return;
+
+      try {
+        // Load plans for current week and next week
+        const currentWeekDate = addDays(today, weekOffset * 7);
+        const nextWeekDate = addDays(today, (weekOffset + 1) * 7);
+
+        const [currentPlan, nextPlan] = await Promise.all([
+          WeeklyPlanService.getWeeklyPlan(userId, currentWeekDate),
+          WeeklyPlanService.getWeeklyPlan(userId, nextWeekDate),
+        ]);
+
+        const newWeeklyPlans = new Map(weeklyPlans);
+
+        if (currentPlan) {
+          const currentWeekStart = startOfWeek(currentWeekDate, {
+            weekStartsOn: 1,
+          });
+          const currentWeekKey = format(currentWeekStart, "yyyy-MM-dd");
+          newWeeklyPlans.set(currentWeekKey, currentPlan);
+        }
+
+        if (nextPlan) {
+          const nextWeekStart = startOfWeek(nextWeekDate, { weekStartsOn: 1 });
+          const nextWeekKey = format(nextWeekStart, "yyyy-MM-dd");
+          newWeeklyPlans.set(nextWeekKey, nextPlan);
+        }
+
+        setWeeklyPlans(newWeeklyPlans);
+        console.log(
+          "📅 Loaded weekly plans:",
+          Array.from(newWeeklyPlans.entries())
+        );
+      } catch (error) {
+        console.error("Error loading visible week plans:", error);
+      }
+    };
+
+    loadVisibleWeekPlans();
   }, [userId, weekOffset]);
+
+  // Load plan for selected week when showPlan changes
+  useEffect(() => {
+    const loadSelectedWeekPlan = async () => {
+      if (!userId || selectedWeekOffset === null) return;
+
+      try {
+        const selectedWeekDate = addDays(today, selectedWeekOffset * 7);
+        const plan = await WeeklyPlanService.getWeeklyPlan(
+          userId,
+          selectedWeekDate
+        );
+
+        if (plan) {
+          setCurrentWeekPlan(plan);
+          setFormData(plan.responses);
+
+          // Store the plan in our weeklyPlans map
+          const weekStart = startOfWeek(selectedWeekDate, { weekStartsOn: 1 });
+          const weekKey = format(weekStart, "yyyy-MM-dd");
+          setWeeklyPlans((prev) => new Map(prev).set(weekKey, plan));
+        } else {
+          setCurrentWeekPlan(null);
+          setFormData({
+            idealWeek: "",
+            obstacles: "",
+            preventActions: "",
+            actionDetails: "",
+            ifThenPlans: "",
+          });
+        }
+      } catch (error) {
+        console.error("Error loading selected week plan:", error);
+      }
+    };
+
+    if (showPlan && selectedWeekOffset !== null) {
+      loadSelectedWeekPlan();
+    }
+  }, [userId, showPlan, selectedWeekOffset]);
 
   const today = new Date();
   const weekStart = addDays(startOfWeek(addDays(today, weekOffset * 7)), 0);
@@ -280,16 +413,23 @@ const OverviewPage: React.FC = () => {
                     format(date, "yyyy-MM-dd") === format(today, "yyyy-MM-dd")
                   }
                   showPlan={showPlan || !!selectedSession}
-                  onSessionClick={setSelectedSession}
+                  onSessionClick={(session) => {
+                    setSelectedSession(session);
+                    // Unselect weekly plan when a recording is clicked
+                    if (showPlan) {
+                      setShowPlan(false);
+                      setSelectedWeekOffset(null);
+                    }
+                  }}
                 />
               ))}
 
               {/* button under top week */}
               <div className="col-span-7 flex justify-center mt-2">
                 <PlanButton
-                  onClick={handlePlanButton}
-                  showPlan={showPlan}
-                  planCreated={planCreated}
+                  onClick={() => handlePlanButton(weekOffset)}
+                  showPlan={showPlan && selectedWeekOffset === weekOffset}
+                  planCreated={hasPlanForWeek(weekOffset)}
                   weekLabel={WeeklyPlanService.getWeekDisplayRange(
                     addDays(today, weekOffset * 7)
                   )}
@@ -305,17 +445,24 @@ const OverviewPage: React.FC = () => {
                   date={addDays(date, 7)}
                   sessions={getSessionsForDate(addDays(date, 7))}
                   showPlan={showPlan || !!selectedSession}
-                  onSessionClick={setSelectedSession}
+                  onSessionClick={(session) => {
+                    setSelectedSession(session);
+                    // Unselect weekly plan when a recording is clicked
+                    if (showPlan) {
+                      setShowPlan(false);
+                      setSelectedWeekOffset(null);
+                    }
+                  }}
                 />
               ))}
               {/* button under bottom week */}
               <div className="col-span-7 flex justify-center mt-2">
                 <PlanButton
-                  onClick={handlePlanButton}
-                  showPlan={showPlan}
-                  planCreated={planCreated}
+                  onClick={() => handlePlanButton(weekOffset + 1)}
+                  showPlan={showPlan && selectedWeekOffset === weekOffset + 1}
+                  planCreated={hasPlanForWeek(weekOffset + 1)}
                   weekLabel={WeeklyPlanService.getWeekDisplayRange(
-                    addDays(today, weekOffset * 7)
+                    addDays(today, (weekOffset + 1) * 7)
                   )}
                 />
               </div>
@@ -330,33 +477,43 @@ const OverviewPage: React.FC = () => {
               selectedRecording ? "w-1/3" : "w-1/2"
             } bg-white border rounded-lg p-6 flex flex-col overflow-y-auto`}
           >
-            {selectedSession ? (
-              <SessionDetailView
-                session={selectedSession}
-                selectedRecording={selectedRecording}
-                onClose={() => {
-                  setSelectedSession(null);
-                  setSelectedRecording(null);
-                  setShowMentalModel(false);
-                  setSelectedQuestionIndex(undefined);
-                }}
-                onRecordingSelect={setSelectedRecording}
-                showMentalModel={showMentalModel}
-                onToggleMentalModel={() => setShowMentalModel(!showMentalModel)}
-                selectedQuestionIndex={selectedQuestionIndex}
-                onQuestionSelect={setSelectedQuestionIndex}
-              />
-            ) : (
+            {showPlan ? (
               <>
-                <h2
-                  className="text-lg font-semibold"
-                  style={{ color: "#545454" }}
-                >
-                  Weekly Plan
-                </h2>
-                <p className="text-sm mb-4" style={{ color: "#b0b0b0" }}>
-                  Voice entry transcript
-                </p>
+                <div className="flex justify-between items-start mb-4">
+                  <div>
+                    <h2
+                      className="text-lg font-semibold"
+                      style={{ color: "#545454" }}
+                    >
+                      Weekly Plan
+                    </h2>
+                    <p className="text-sm" style={{ color: "#b0b0b0" }}>
+                      Create your weekly behavior plan
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => {
+                      setShowPlan(false);
+                      setSelectedWeekOffset(null);
+                    }}
+                    className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
+                    title="Close weekly plan"
+                  >
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      stroke="currentColor"
+                      viewBox="0 0 24 24"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M6 18L18 6M6 6l12 12"
+                      />
+                    </svg>
+                  </button>
+                </div>
 
                 {/* prompts + textareas */}
                 <div className="flex-1 space-y-4 overflow-y-auto">
@@ -409,7 +566,23 @@ const OverviewPage: React.FC = () => {
                     : "Save Plan"}
                 </button>
               </>
-            )}
+            ) : selectedSession ? (
+              <SessionDetailView
+                session={selectedSession}
+                selectedRecording={selectedRecording}
+                onClose={() => {
+                  setSelectedSession(null);
+                  setSelectedRecording(null);
+                  setShowMentalModel(false);
+                  setSelectedQuestionIndex(undefined);
+                }}
+                onRecordingSelect={setSelectedRecording}
+                showMentalModel={showMentalModel}
+                onToggleMentalModel={() => setShowMentalModel(!showMentalModel)}
+                selectedQuestionIndex={selectedQuestionIndex}
+                onQuestionSelect={setSelectedQuestionIndex}
+              />
+            ) : null}
           </div>
         )}
 
