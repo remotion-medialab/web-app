@@ -34,7 +34,7 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   selectedQuestionIndex,
   onQuestionSelect,
 }) => {
-  const { userId } = useAuth();
+  const { userId, condition } = useAuth();
   const [recordingCounterfactuals, setRecordingCounterfactuals] = useState<
     Record<string, CounterfactualData>
   >({});
@@ -189,7 +189,8 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
       .catch(console.error);
   };
 
-  if (showMentalModel) {
+  // Hide mental model panel for condition B
+  if (showMentalModel && condition !== "B") {
     return (
       <MentalModelViewer
         session={session}

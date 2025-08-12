@@ -4,6 +4,7 @@ import { CounterfactualService } from "../lib/counterfactualService";
 import type { Recording } from "../lib/recordingsService";
 import { RECORDING_QUESTIONS } from "../constants/recordingQuestions";
 import { CounterfactualFirebaseService } from "../lib/counterfactualFirebaseService";
+import { useAuth } from "../contexts/AuthContext";
 
 interface CounterfactualViewerProps {
   recordings: Recording[];
@@ -92,6 +93,7 @@ export const CounterfactualViewer: React.FC<CounterfactualViewerProps> = ({
   sessionId,
   onCounterfactualSelected,
 }) => {
+  const { condition } = useAuth();
   const [stepData, setStepData] = useState<StepCounterfactuals[]>([]);
   const [activeStep, setActiveStep] = useState<number>(0);
   const [serviceAvailable, setServiceAvailable] = useState<boolean>(true);
@@ -484,6 +486,11 @@ export const CounterfactualViewer: React.FC<CounterfactualViewerProps> = ({
       );
     }
   };
+
+  // Hide entirely for condition B (no AI panel)
+  if (condition === "B") {
+    return null;
+  }
 
   return (
     <div className="bg-white rounded-xl shadow-lg p-6">

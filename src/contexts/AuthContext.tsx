@@ -1,6 +1,8 @@
 import React, { createContext, useContext, useState, useEffect } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
+import { db } from "../lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 import toast from "react-hot-toast";
 import { auth } from "../lib/firebase";
 
@@ -9,6 +11,7 @@ interface AuthContextType {
   userId: string | null;
   loading: boolean;
   logout: () => Promise<void>;
+  condition: "A" | "B" | "C" | null;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -26,14 +29,47 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
 }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [condition, setCondition] = useState<"A" | "B" | "C" | null>(null);
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
       console.log(
         "🔐 Auth state changed:",
         user ? `User: ${user.uid}` : "No user"
       );
       setUser(user);
+      // Load cached condition immediately for snappy UI
+      try {
+        const cached = localStorage.getItem("userCondition");
+        if (cached === "A" || cached === "B" || cached === "C") {
+          setCondition(cached);
+        }
+      } catch {}
+
+      // Load user condition from Firestore profile
+      if (user) {
+        try {
+          const profileRef = doc(db, "users", user.uid);
+          const snap = await getDoc(profileRef);
+          const data = snap.exists() ? (snap.data() as any) : null;
+          const cond = data?.condition as "A" | "B" | "C" | undefined;
+          setCondition(cond ?? null);
+          // Sync cache
+          if (cond) {
+            try {
+              localStorage.setItem("userCondition", cond);
+            } catch {}
+          }
+        } catch (e) {
+          console.warn("⚠️ Failed to load user condition", e);
+          setCondition(null);
+        }
+      } else {
+        setCondition(null);
+        try {
+          localStorage.removeItem("userCondition");
+        } catch {}
+      }
       setLoading(false);
     });
 
@@ -60,6 +96,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
     userId: user?.uid || null,
     loading,
     logout,
+    condition,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

@@ -6,13 +6,15 @@ import {
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
 } from "firebase/auth";
-import { auth } from "../lib/firebase";
+import { auth, db } from "../lib/firebase";
+import { doc, setDoc } from "firebase/firestore";
 
 const SignInPage: React.FC = () => {
   const [step, setStep] = useState(0); // 0: Welcome, 1: Sign In, 2: Sign Up
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [condition, setCondition] = useState<"A" | "B" | "C" | "">("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const navigate = useNavigate();
@@ -40,7 +42,7 @@ const SignInPage: React.FC = () => {
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email || !password || !confirmPassword) return;
+    if (!email || !password || !confirmPassword || !condition) return;
 
     if (password !== confirmPassword) {
       setError("Passwords don't match");
@@ -51,7 +53,17 @@ const SignInPage: React.FC = () => {
     setError("");
 
     try {
-      await createUserWithEmailAndPassword(auth, email, password);
+      const cred = await createUserWithEmailAndPassword(auth, email, password);
+      // Save condition locally for instant gating
+      try {
+        localStorage.setItem("userCondition", condition);
+      } catch {}
+      // Also persist to Firestore (kept for cross-device coherence)
+      await setDoc(
+        doc(db, "users", cred.user.uid),
+        { condition, createdAt: new Date() },
+        { merge: true }
+      );
       navigate("/insights");
     } catch (error: any) {
       setError(error.message || "Sign up failed");
@@ -160,7 +172,6 @@ const SignInPage: React.FC = () => {
                 required
                 disabled={loading}
               />
-
               <input
                 type="password"
                 value={password}
@@ -223,6 +234,25 @@ const SignInPage: React.FC = () => {
                 disabled={loading}
               />
 
+              {/* Study condition selection (required for account creation) */}
+              <div className="flex flex-col items-center space-y-2">
+                <label className="text-sm text-blue-600">Study Condition</label>
+                <select
+                  value={condition}
+                  onChange={(e) => setCondition(e.target.value as any)}
+                  className="border border-blue-300 rounded-full px-4 py-2 w-64 text-center focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  disabled={loading}
+                  required
+                >
+                  <option value="" disabled>
+                    Select condition
+                  </option>
+                  <option value="A">A: No Structure planning</option>
+                  <option value="B">B: Structured planning w/o AI</option>
+                  <option value="C">C: Structured planning with AI</option>
+                </select>
+              </div>
+
               <input
                 type="password"
                 value={password}
@@ -258,7 +288,13 @@ const SignInPage: React.FC = () => {
               <button
                 type="submit"
                 className="border border-blue-600 text-blue-600 px-6 py-2 rounded-full hover:bg-blue-50 disabled:opacity-50"
-                disabled={loading || !email || !password || !confirmPassword}
+                disabled={
+                  loading ||
+                  !email ||
+                  !password ||
+                  !confirmPassword ||
+                  !condition
+                }
               >
                 {loading ? "Creating Account..." : "Sign Up"}
               </button>

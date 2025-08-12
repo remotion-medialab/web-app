@@ -138,7 +138,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
   onQuestionSelect,
   onRecordingSelect,
 }) => {
-  const { userId } = useAuth();
+  const { userId, condition } = useAuth();
   const [isGenerating, setIsGenerating] = useState(false);
   const [counterfactuals, setCounterfactuals] = useState<string[]>([]);
   const [showCounterfactuals, setShowCounterfactuals] = useState(false);
@@ -690,7 +690,6 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
     }
   };
 
-  
   // const handleGenerateAllMissingAlternatives_disable = async () => {
   //   if (!userId) {
   //     toast.error("Please sign in to generate alternatives!");
@@ -865,7 +864,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
   //     setIsGenerating(false);
   //   }
   // };
-  
+
   const handleGenerateAllAlternatives = async () => {
     if (!userId) {
       toast.error("Please sign in to generate alternatives!");
@@ -876,7 +875,10 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
 
     try {
       // Prepare all API requests in parallel for all questions (excluding question 0)
-      const requests = Array.from({ length: NUM_QUESTIONS - 1 }, (_, i) => i + 1).map((questionIndex) => {
+      const requests = Array.from(
+        { length: NUM_QUESTIONS - 1 },
+        (_, i) => i + 1
+      ).map((questionIndex) => {
         const recording = session.recordings.find(
           (r) => r.stepNumber === questionIndex
         );
@@ -1233,6 +1235,11 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
   const allNodes = getAllNodes();
   const counterfactualConnections = getCounterfactualConnections();
   // const indicatorConnections = getIndicatorConnections();
+
+  // Hide entirely for condition B (no AI panel)
+  if (condition === "B") {
+    return null;
+  }
 
   return (
     <div className="w-full h-full bg-white border rounded-lg flex flex-col">
