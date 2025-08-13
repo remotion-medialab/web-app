@@ -2,7 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from "react";
 import { onAuthStateChanged, signOut } from "firebase/auth";
 import type { User } from "firebase/auth";
 import { db } from "../lib/firebase";
-import { doc, getDoc } from "firebase/firestore";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 import toast from "react-hot-toast";
 import { auth } from "../lib/firebase";
 
@@ -46,29 +46,38 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({
         }
       } catch {}
 
-      // Load user condition from Firestore profile
+      // Load user condition from Firestore profile and update lastActive
       if (user) {
         try {
           const profileRef = doc(db, "users", user.uid);
           const snap = await getDoc(profileRef);
-          const data = snap.exists() ? (snap.data() as any) : null;
+          const data = snap.exists() ? snap.data() : null;
           const cond = data?.condition as "A" | "B" | "C" | undefined;
           setCondition(cond ?? null);
           // Sync cache
           if (cond) {
             try {
               localStorage.setItem("userCondition", cond);
-            } catch {}
+            } catch (e) {
+              console.warn("⚠️ Failed to cache user condition", e);
+            }
           }
+          
+          // Update lastActive timestamp
+          await updateDoc(profileRef, {
+            lastActive: new Date()
+          });
         } catch (e) {
-          console.warn("⚠️ Failed to load user condition", e);
+          console.warn("⚠️ Failed to load user condition or update lastActive", e);
           setCondition(null);
         }
       } else {
         setCondition(null);
         try {
           localStorage.removeItem("userCondition");
-        } catch {}
+        } catch (e) {
+          console.warn("⚠️ Failed to remove cached user condition", e);
+        }
       }
       setLoading(false);
     });

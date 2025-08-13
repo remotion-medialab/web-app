@@ -1235,8 +1235,8 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
   const counterfactualConnections = getCounterfactualConnections();
   // const indicatorConnections = getIndicatorConnections();
 
-  // Hide entirely for condition B (no AI panel)
-  if (condition === "B") {
+  // Hide entirely for condition A (no AI panel)
+  if (condition === "A") {
     return null;
   }
 
@@ -1253,15 +1253,17 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
           </p>
         </div>
         <div className="flex justify-end items-center w-full pr-3">
-          {/* Generate All Counterfactuals */}
-          <button
-            onClick={handleGenerateAllAlternatives}
-            disabled={isGenerating || !userId}
-            className="flex items-center gap-2 px-4 py-1 text-white border-1 border-black-600 rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-          >
-            <span className="text-lg">🚀</span>
-            {isGenerating && "Generating..."}
-          </button>
+          {/* Generate All Counterfactuals - Hidden for condition B */}
+          {condition !== "B" && (
+            <button
+              onClick={handleGenerateAllAlternatives}
+              disabled={isGenerating || !userId}
+              className="flex items-center gap-2 px-4 py-1 text-white border-1 border-black-600 rounded-full hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+            >
+              <span className="text-lg">🚀</span>
+              {isGenerating && "Generating..."}
+            </button>
+          )}
         </div>
         <button
           onClick={onClose}
@@ -1392,38 +1394,41 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
         </div>
       )}
       <div className="p-6 border-t flex flex-col items-center space-y-15">
-        <div className="flex flex-col items-center space-y-2">
-          <button
-            onClick={handleGenerateAlternatives}
-            disabled={
-              isGenerating ||
-              selectedQuestionIndex === undefined ||
-              selectedQuestionIndex === 0 ||
-              (showCounterfactuals && counterfactuals.length > 0)
-            }
-            className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-300 rounded-full hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-            style={{ color: "#545454" }}
-          >
-            <span className="text-lg">✨</span>
-            {isGenerating
-              ? "Generating..."
-              : selectedQuestionIndex === 0
-              ? "Not available for situation description"
-              : showCounterfactuals && counterfactuals.length > 0
-              ? "Alternatives already generated"
-              : 'Generate "What if..." alternatives'}
-          </button>
-          {selectedQuestionIndex === undefined && (
-            <p className="text-xs" style={{ color: "#b0b0b0" }}>
-              Select a question circle to generate alternatives
-            </p>
-          )}
-          {selectedQuestionIndex === 0 && (
-            <p className="text-xs" style={{ color: "#b0b0b0" }}>
-              Situation description cannot generate alternatives
-            </p>
-          )}
-        </div>
+        {/* Generate "What if..." alternatives button - Hidden for condition B */}
+        {condition !== "B" && (
+          <div className="flex flex-col items-center space-y-2">
+            <button
+              onClick={handleGenerateAlternatives}
+              disabled={
+                isGenerating ||
+                selectedQuestionIndex === undefined ||
+                selectedQuestionIndex === 0 ||
+                (showCounterfactuals && counterfactuals.length > 0)
+              }
+              className="flex items-center gap-2 px-6 py-3 bg-white border border-gray-300 rounded-full hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              style={{ color: "#545454" }}
+            >
+              <span className="text-lg">✨</span>
+              {isGenerating
+                ? "Generating..."
+                : selectedQuestionIndex === 0
+                ? "Not available for situation description"
+                : showCounterfactuals && counterfactuals.length > 0
+                ? "Alternatives already generated"
+                : 'Generate "What if..." alternatives'}
+            </button>
+            {selectedQuestionIndex === undefined && (
+              <p className="text-xs" style={{ color: "#b0b0b0" }}>
+                Select a question circle to generate alternatives
+              </p>
+            )}
+            {selectedQuestionIndex === 0 && (
+              <p className="text-xs" style={{ color: "#b0b0b0" }}>
+                Situation description cannot generate alternatives
+              </p>
+            )}
+          </div>
+        )}
 
         {/* <div className="flex flex-col items-center space-y-2">
                     <button
