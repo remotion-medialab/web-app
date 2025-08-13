@@ -189,8 +189,8 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
       .catch(console.error);
   };
 
-  // Hide mental model panel for condition B
-  if (showMentalModel && condition !== "B") {
+  // Hide mental model panel for condition A
+  if (showMentalModel && condition !== "A") {
     return (
       <MentalModelViewer
         session={session}
