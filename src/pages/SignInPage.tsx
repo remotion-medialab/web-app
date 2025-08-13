@@ -7,7 +7,7 @@ import {
   createUserWithEmailAndPassword,
 } from "firebase/auth";
 import { auth, db } from "../lib/firebase";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 
 const SignInPage: React.FC = () => {
   const [step, setStep] = useState(0); // 0: Welcome, 1: Sign In, 2: Sign Up
@@ -31,7 +31,23 @@ const SignInPage: React.FC = () => {
     setError("");
 
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // Fetch user condition from Firebase after successful sign-in
+      try {
+        const profileRef = doc(db, "users", userCredential.user.uid);
+        const snap = await getDoc(profileRef);
+        const data = snap.exists() ? snap.data() : null;
+        const condition = data?.condition as "A" | "B" | "C" | undefined;
+        
+        // Cache the condition locally for immediate access
+        if (condition) {
+          localStorage.setItem("userCondition", condition);
+        }
+      } catch (e) {
+        console.warn("⚠️ Failed to load user condition after sign-in", e);
+      }
+      
       navigate("/insights");
     } catch (error: any) {
       setError(error.message || "Sign in failed");
@@ -61,7 +77,11 @@ const SignInPage: React.FC = () => {
       // Also persist to Firestore (kept for cross-device coherence)
       await setDoc(
         doc(db, "users", cred.user.uid),
-        { condition, createdAt: new Date() },
+        { 
+          condition, 
+          createdAt: new Date(),
+          lastActive: new Date()
+        },
         { merge: true }
       );
       navigate("/insights");
