@@ -54,7 +54,7 @@ const OverviewPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
 
   // Auth and recordings data
-  const { userId, loading: authLoading, logout } = useAuth();
+  const { userId, loading: authLoading, logout, condition } = useAuth();
   const {
     sessionsByDay,
     loading: recordingsLoading,
@@ -318,7 +318,7 @@ const OverviewPage: React.FC = () => {
         {/* LEFT panel: calendar */}
         <div
           className={`${
-            selectedRecording
+            selectedRecording && condition !== "A"
               ? "w-1/3"
               : showPlan || selectedSession
               ? "w-1/2"
@@ -474,7 +474,7 @@ const OverviewPage: React.FC = () => {
         {(selectedSession || showPlan) && (
           <div
             className={`${
-              selectedRecording ? "w-1/3" : "w-1/2"
+              selectedRecording && condition !== "A" ? "w-1/3" : "w-1/2"
             } bg-white border rounded-lg p-6 flex flex-col overflow-y-auto`}
           >
             {showPlan ? (
@@ -587,21 +587,22 @@ const OverviewPage: React.FC = () => {
         )}
 
         {/* RIGHT panel: Mental Model Viewer */}
-        {(selectedRecording || (selectedSession && showMentalModel)) && (
-          <div className="w-1/3 flex flex-col">
-            <MentalModelViewer
-              session={selectedSession!}
-              onClose={() => {
-                setSelectedRecording(null);
-                setShowMentalModel(false);
-                setSelectedQuestionIndex(undefined);
-              }}
-              selectedQuestionIndex={selectedQuestionIndex}
-              onQuestionSelect={setSelectedQuestionIndex}
-              onRecordingSelect={setSelectedRecording}
-            />
-          </div>
-        )}
+        {(selectedRecording || (selectedSession && showMentalModel)) &&
+          condition !== "A" && (
+            <div className="w-1/3 flex flex-col">
+              <MentalModelViewer
+                session={selectedSession!}
+                onClose={() => {
+                  setSelectedRecording(null);
+                  setShowMentalModel(false);
+                  setSelectedQuestionIndex(undefined);
+                }}
+                selectedQuestionIndex={selectedQuestionIndex}
+                onQuestionSelect={setSelectedQuestionIndex}
+                onRecordingSelect={setSelectedRecording}
+              />
+            </div>
+          )}
       </div>
     </div>
   );
