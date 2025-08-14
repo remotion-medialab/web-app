@@ -10,6 +10,7 @@ import MentalModelViewer from "../components/MentalModelViewer";
 import type { Recording } from "../lib/recordingsService";
 import { WeeklyPlanService } from "../lib/weeklyPlanService";
 import type { WeeklyPlan, WeeklyPlanFormData } from "../types/weeklyPlan";
+import toast from "react-hot-toast";
 
 // day of week headers
 const dayHeaders = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -20,10 +21,39 @@ const prompts = [
   "What are the biggest obstacles that would prevent you from having it that way?",
   "What would you have to do to prevent or overcome those obstacles?",
   "Further expand on these actions. When would it be done? With who? Where?",
-  'Write down as many "If-Then" behavior plans (i.e. “If situation X arises, then I will do Y.”)',
+  'Write down as many "If-Then" behavior plans (i.e. "If situation X arises, then I will do Y.")',
+];
+
+// prompts for the Weekly Plan textarea fields (condition A)
+const promptsConditionA = [
+  "What is your most important wish or concern in your interpersonal life that you have recurring regrets about and want to change? Choose something challenging that you are likely to face in the next few days.",
+  "If you fulfilled this wish or goal, what would be the best possible outcome?",
+  "What is it within you—your habits, reactions, or thoughts—that most holds you back from fulfilling this wish?",
+  "List all the actions you could take or thoughts you could use to overcome this obstacle.",
 ];
 
 const OverviewPage: React.FC = () => {
+  // Helper function to create default form data
+  const createDefaultFormData = (): WeeklyPlanFormData => ({
+    idealWeek: "",
+    obstacles: "",
+    preventActions: "",
+    actionDetails: "",
+    ifThenPlans: "",
+    wish: "",
+    bestOutcome: "",
+    obstacles: [""], // Start with one empty item for condition A
+    overcomePlans: [""], // Start with one empty item for condition A
+  });
+
+  // Helper function to merge plan responses with default form data
+  const mergePlanResponses = (
+    responses: Partial<WeeklyPlanFormData>
+  ): WeeklyPlanFormData => ({
+    ...createDefaultFormData(),
+    ...responses,
+  });
+
   const [showPlan, setShowPlan] = useState(false); // whether right-side panel is shown
   const [selectedWeekOffset, setSelectedWeekOffset] = useState<number | null>(
     null
@@ -44,13 +74,9 @@ const OverviewPage: React.FC = () => {
   const [weeklyPlans, setWeeklyPlans] = useState<Map<string, WeeklyPlan>>(
     new Map()
   );
-  const [formData, setFormData] = useState<WeeklyPlanFormData>({
-    idealWeek: "",
-    obstacles: "",
-    preventActions: "",
-    actionDetails: "",
-    ifThenPlans: "",
-  });
+  const [formData, setFormData] = useState<WeeklyPlanFormData>(
+    createDefaultFormData()
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   // Auth and recordings data
@@ -111,10 +137,10 @@ const OverviewPage: React.FC = () => {
       setWeeklyPlans((prev) => new Map(prev).set(weekKey, savedPlan));
       console.log("💾 Saved plan for week:", weekKey, savedPlan);
 
-      alert("Weekly behavior plan saved successfully!");
+      toast.success("Weekly behavior plan saved successfully!");
     } catch (error) {
       console.error("Error saving weekly plan:", error);
-      alert("Failed to save weekly plan. Please try again.");
+      toast.error("Failed to save weekly plan. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -122,6 +148,24 @@ const OverviewPage: React.FC = () => {
 
   const handleFormChange = (field: keyof WeeklyPlanFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleArrayChange = (
+    field: "obstacles" | "overcomePlans",
+    index: number,
+    value: string
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: prev[field].map((item, i) => (i === index ? value : item)),
+    }));
+  };
+
+  const addArrayItem = (field: "obstacles" | "overcomePlans") => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: [...prev[field], ""],
+    }));
   };
 
   const getSessionsForWeek = (
@@ -142,10 +186,6 @@ const OverviewPage: React.FC = () => {
     });
 
     return allSessionsThisWeek;
-  };
-
-  const getCurrentWeekSessions = (): RecordingSession[] => {
-    return getSessionsForWeek(weekOffset);
   };
 
   // Check if a plan exists for a specific week
@@ -175,7 +215,7 @@ const OverviewPage: React.FC = () => {
 
         if (plan) {
           setCurrentWeekPlan(plan);
-          setFormData(plan.responses);
+          setFormData(mergePlanResponses(plan.responses));
 
           // Store the plan in our weeklyPlans map
           const weekStart = startOfWeek(currentWeekDate, { weekStartsOn: 1 });
@@ -183,13 +223,7 @@ const OverviewPage: React.FC = () => {
           setWeeklyPlans((prev) => new Map(prev).set(weekKey, plan));
         } else {
           setCurrentWeekPlan(null);
-          setFormData({
-            idealWeek: "",
-            obstacles: "",
-            preventActions: "",
-            actionDetails: "",
-            ifThenPlans: "",
-          });
+          setFormData(createDefaultFormData());
         }
       } catch (error) {
         console.error("Error loading weekly plan:", error);
@@ -257,7 +291,7 @@ const OverviewPage: React.FC = () => {
 
         if (plan) {
           setCurrentWeekPlan(plan);
-          setFormData(plan.responses);
+          setFormData(mergePlanResponses(plan.responses));
 
           // Store the plan in our weeklyPlans map
           const weekStart = startOfWeek(selectedWeekDate, { weekStartsOn: 1 });
@@ -265,13 +299,7 @@ const OverviewPage: React.FC = () => {
           setWeeklyPlans((prev) => new Map(prev).set(weekKey, plan));
         } else {
           setCurrentWeekPlan(null);
-          setFormData({
-            idealWeek: "",
-            obstacles: "",
-            preventActions: "",
-            actionDetails: "",
-            ifThenPlans: "",
-          });
+          setFormData(createDefaultFormData());
         }
       } catch (error) {
         console.error("Error loading selected week plan:", error);
@@ -517,37 +545,192 @@ const OverviewPage: React.FC = () => {
 
                 {/* prompts + textareas */}
                 <div className="flex-1 space-y-4 overflow-y-auto">
-                  {prompts.map((prompt, idx) => {
-                    const fieldNames: (keyof WeeklyPlanFormData)[] = [
-                      "idealWeek",
-                      "obstacles",
-                      "preventActions",
-                      "actionDetails",
-                      "ifThenPlans",
-                    ];
-                    const fieldName = fieldNames[idx];
-
-                    return (
-                      <div key={idx} className="flex flex-col">
+                  {condition === "A" ? (
+                    // Condition A form
+                    <>
+                      {/* Q1: Wish */}
+                      <div className="flex flex-col">
                         <label
                           className="text-sm font-medium mb-1"
                           style={{ color: "#545454" }}
                         >
-                          {prompt}
+                          Q1. {promptsConditionA[0]}
                         </label>
                         <textarea
                           className="border rounded p-2 text-sm"
                           rows={3}
                           style={{ borderColor: "#d4d4d4", color: "#545454" }}
-                          value={formData[fieldName]}
+                          value={formData.wish}
                           onChange={(e) =>
-                            handleFormChange(fieldName, e.target.value)
+                            handleFormChange("wish", e.target.value)
                           }
-                          placeholder={`Enter your response for: ${prompt}`}
+                          placeholder="Enter your most important wish or concern..."
                         />
                       </div>
-                    );
-                  })}
+
+                      {/* Q2: Best Outcome */}
+                      <div className="flex flex-col">
+                        <label
+                          className="text-sm font-medium mb-1"
+                          style={{ color: "#545454" }}
+                        >
+                          Q2. {promptsConditionA[1]}
+                        </label>
+                        <textarea
+                          className="border rounded p-2 text-sm"
+                          rows={3}
+                          style={{ borderColor: "#d4d4d4", color: "#545454" }}
+                          value={formData.bestOutcome}
+                          onChange={(e) =>
+                            handleFormChange("bestOutcome", e.target.value)
+                          }
+                          placeholder="Describe the best possible outcome..."
+                        />
+                      </div>
+
+                      {/* Transition text */}
+                      <div className="flex flex-col">
+                        <p
+                          className="text-sm font-bold mb-4"
+                          style={{ color: "#545454" }}
+                        >
+                          Now, take a moment and imagine your obstacle and plan
+                          how you would act.
+                        </p>
+                      </div>
+
+                      {/* Q3: Obstacles */}
+                      <div className="flex flex-col">
+                        <label
+                          className="text-sm font-medium mb-1"
+                          style={{ color: "#545454" }}
+                        >
+                          Q3. {promptsConditionA[2]}
+                        </label>
+                        <div className="space-y-2">
+                          {formData.obstacles.map((obstacle, idx) => (
+                            <div key={idx} className="flex gap-2 items-center">
+                              <span
+                                className="text-sm"
+                                style={{ color: "#545454" }}
+                              >
+                                I want to try differently if
+                              </span>
+                              <input
+                                type="text"
+                                className="flex-1 border rounded p-2 text-sm bg-green-50"
+                                style={{
+                                  borderColor: "#d4d4d4",
+                                  color: "#545454",
+                                }}
+                                value={obstacle}
+                                onChange={(e) =>
+                                  handleArrayChange(
+                                    "obstacles",
+                                    idx,
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="[anticipated obstacle trigger]"
+                              />
+                              <span
+                                className="text-sm"
+                                style={{ color: "#545454" }}
+                              >
+                                occurs.
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => addArrayItem("obstacles")}
+                                className="px-3 py-2 text-blue-500 hover:text-blue-700 border border-blue-300 rounded hover:bg-blue-50 text-sm"
+                              >
+                                Add Another
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Q4: Overcome Plans */}
+                      <div className="flex flex-col">
+                        <label
+                          className="text-sm font-medium mb-1"
+                          style={{ color: "#545454" }}
+                        >
+                          Q4. {promptsConditionA[3]}
+                        </label>
+                        <div className="space-y-2">
+                          {formData.overcomePlans.map((plan, idx) => (
+                            <div key={idx} className="flex gap-2 items-center">
+                              <span
+                                className="text-sm"
+                                style={{ color: "#545454" }}
+                              >
+                                If the obstacles occur, then I will
+                              </span>
+                              <input
+                                type="text"
+                                className="flex-1 border rounded p-2 text-sm bg-green-50"
+                                style={{
+                                  borderColor: "#d4d4d4",
+                                  color: "#545454",
+                                }}
+                                value={plan}
+                                onChange={(e) =>
+                                  handleArrayChange(
+                                    "overcomePlans",
+                                    idx,
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="[specific action or thought]"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => addArrayItem("overcomePlans")}
+                                className="px-3 py-2 text-blue-500 hover:text-blue-700 border border-blue-300 rounded hover:bg-blue-50 text-sm"
+                              >
+                                Add Another
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    // Original form (non-A condition)
+                    prompts.map((prompt, idx) => {
+                      const fieldNames: (keyof WeeklyPlanFormData)[] = [
+                        "idealWeek",
+                        "obstacles",
+                        "preventActions",
+                        "actionDetails",
+                        "ifThenPlans",
+                      ];
+                      const fieldName = fieldNames[idx];
+
+                      return (
+                        <div key={idx} className="flex flex-col">
+                          <label
+                            className="text-sm font-medium mb-1"
+                            style={{ color: "#545454" }}
+                          >
+                            {prompt}
+                          </label>
+                          <textarea
+                            className="border rounded p-2 text-sm"
+                            rows={3}
+                            style={{ borderColor: "#d4d4d4", color: "#545454" }}
+                            value={formData[fieldName]}
+                            onChange={(e) =>
+                              handleFormChange(fieldName, e.target.value)
+                            }
+                            placeholder={`Enter your response for: ${prompt}`}
+                          />
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
 
                 {/* save button */}
@@ -679,7 +862,7 @@ const DayBox: React.FC<{
     {/* recording sessions: blue circles + completion times */}
     {sessions.length > 0 && (
       <div className="mt-1 flex-1 flex flex-col gap-3 justify-center w-full">
-        {sessions.map((session, _) => (
+        {sessions.map((session) => (
           <div
             key={session.sessionId}
             className="flex items-center justify-center border w-full relative group cursor-pointer"
