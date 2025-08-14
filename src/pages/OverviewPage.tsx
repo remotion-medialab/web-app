@@ -144,9 +144,7 @@ const OverviewPage: React.FC = () => {
     return allSessionsThisWeek;
   };
 
-  const getCurrentWeekSessions = (): RecordingSession[] => {
-    return getSessionsForWeek(weekOffset);
-  };
+  // getCurrentWeekSessions helper removed (unused)
 
   // Check if a plan exists for a specific week
   const hasPlanForWeek = (weekOffsetForPlan: number): boolean => {
@@ -413,6 +411,7 @@ const OverviewPage: React.FC = () => {
                     format(date, "yyyy-MM-dd") === format(today, "yyyy-MM-dd")
                   }
                   showPlan={showPlan || !!selectedSession}
+                  requiredSteps={condition === "A" ? 1 : 5}
                   onSessionClick={(session) => {
                     setSelectedSession(session);
                     // Unselect weekly plan when a recording is clicked
@@ -444,6 +443,7 @@ const OverviewPage: React.FC = () => {
                   key={idx + 7}
                   date={addDays(date, 7)}
                   sessions={getSessionsForDate(addDays(date, 7))}
+                  requiredSteps={condition === "A" ? 1 : 5}
                   showPlan={showPlan || !!selectedSession}
                   onSessionClick={(session) => {
                     setSelectedSession(session);
@@ -657,12 +657,14 @@ const DayBox: React.FC<{
   isToday?: boolean;
   showPlan?: boolean;
   onSessionClick?: (session: RecordingSession) => void;
+  requiredSteps?: number;
 }> = ({
   date,
   sessions,
   isToday = false,
   showPlan = false,
   onSessionClick,
+  requiredSteps = 5,
 }) => (
   <div
     className="bg-white rounded-[10px] p-2 flex flex-col items-center w-full min-h-[220px]"
@@ -684,8 +686,9 @@ const DayBox: React.FC<{
             key={session.sessionId}
             className="flex items-center justify-center border w-full relative group cursor-pointer"
             style={{
-              color: "#b0b0b0",
-              borderColor: session.isComplete ? "#4CAF50" : "#b0b0b0",
+              color: "#3b82f6",
+              borderColor: session.isComplete ? "#3b82f6" : "#93c5fd",
+              backgroundColor: "rgba(59, 130, 246, 0.08)",
               borderRadius: "22px",
               padding: showPlan ? "10px" : "10px 10px",
             }}
@@ -696,7 +699,7 @@ const DayBox: React.FC<{
           >
             <span
               className={`rounded-full ${
-                session.isComplete ? "bg-blue-500" : "bg-gray-400"
+                session.isComplete ? "bg-blue-500" : "bg-blue-300"
               }`}
               style={{
                 width: showPlan ? "16px" : "16px",
@@ -708,14 +711,14 @@ const DayBox: React.FC<{
               <div className="ml-2 text-sm flex flex-col items-start">
                 <span>{format(session.completedAt, "h:mm a")}</span>
                 <span className="text-xs opacity-75">
-                  {session.recordings.length}/5 recordings
+                  {session.recordings.length}/{requiredSteps} recordings
                 </span>
               </div>
             )}
 
             {/* Tooltip on hover - positioned relative to the green box */}
             <div className="absolute bottom-full left-1/2 transform -translate-x-1/2 -mb-1 px-2 py-1 bg-black text-white text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap z-50 pointer-events-none">
-              {session.isComplete
+              {session.recordings.length >= requiredSteps
                 ? "✅ Complete session"
                 : "⏳ Partial session"}
               <br />
