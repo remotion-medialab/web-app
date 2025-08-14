@@ -12,6 +12,7 @@ import MentalModelViewer from "../components/MentalModelViewer";
 import type { Recording } from "../lib/recordingsService";
 import { WeeklyPlanService } from "../lib/weeklyPlanService";
 import type { WeeklyPlan, WeeklyPlanFormData } from "../types/weeklyPlan";
+import toast from "react-hot-toast";
 
 // day of week headers
 const dayHeaders = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -22,10 +23,126 @@ const prompts = [
   "What are the biggest obstacles that would prevent you from having it that way?",
   "What would you have to do to prevent or overcome those obstacles?",
   "Further expand on these actions. When would it be done? With who? Where?",
-  'Write down as many "If-Then" behavior plans (i.e. “If situation X arises, then I will do Y.”)',
+  'Write down as many "If-Then" behavior plans (i.e. "If situation X arises, then I will do Y.")',
 ];
 
+// prompts for the Weekly Plan textarea fields (condition A)
+const promptsConditionA = [
+  "What is your most important wish or concern in your interpersonal life that you have recurring regrets about and want to change? Choose something challenging that you are likely to face in the next few days.",
+  "If you fulfilled this wish or goal, what would be the best possible outcome?",
+  "What is it within you—your habits, reactions, or thoughts—that most holds you back from fulfilling this wish?",
+  "List all the actions you could take or thoughts you could use to overcome this obstacle.",
+];
+
+// prompts for the Weekly Plan textarea fields (conditions B and C)
+const promptsConditionBC = {
+  q1: "What is your most important wish or concern in your interpersonal life that you have recurring regrets about and want to change? Choose something challenging that you are likely to face in the next few days.",
+  q2: "If you fulfilled this wish or goal, what would be the best possible outcome?",
+  q3: "What is it within you that holds you back from fulfilling your wish?",
+  q4: "Are there any inner obstacles in how you select or avoid the situation?",
+  q5: "Let's write all the actions you can take or thoughts you can think to overcome your obstacles.",
+};
+
 const OverviewPage: React.FC = () => {
+  // Helper function to create default form data
+  const createDefaultFormData = (): WeeklyPlanFormData => ({
+    idealWeek: "",
+    obstacles: "",
+    preventActions: "",
+    actionDetails: "",
+    ifThenPlans: "",
+    wish: "",
+    bestOutcome: "",
+    obstacles: [""], // Start with one empty item for condition A
+    overcomePlans: [""], // Start with one empty item for condition A
+    outcomes: {
+      modified: "",
+      focused: "",
+      interpreted: "",
+      reacted: "",
+    },
+    obstaclesObj: {
+      SituationObstacle: [""],
+      ModificationObstacle: [""],
+      AttentionObstacle: [""],
+      InterpretationObstacle: [""],
+      ReactionObstacle: [""],
+    },
+    overcomePlansObj: {
+      SituationPlan: [""],
+      ModificationPlan: [""],
+      AttentionPlan: [""],
+      InterpretationPlan: [""],
+      ReactionPlan: [""],
+    },
+  });
+
+  // Helper function to merge plan responses with default form data
+  const mergePlanResponses = (
+    responses: WeeklyPlan["responses"]
+  ): WeeklyPlanFormData => {
+    const defaultData = createDefaultFormData();
+    return {
+      ...defaultData,
+      // Original questions
+      idealWeek: responses?.idealWeek || defaultData.idealWeek,
+      obstacles: responses?.obstacles || defaultData.obstacles,
+      preventActions: responses?.preventActions || defaultData.preventActions,
+      actionDetails: responses?.actionDetails || defaultData.actionDetails,
+      ifThenPlans: responses?.ifThenPlans || defaultData.ifThenPlans,
+
+      // Condition A questions
+      wish: responses?.wish || defaultData.wish,
+      bestOutcome: responses?.bestOutcome || defaultData.bestOutcome,
+      obstacles: responses?.obstacles || defaultData.obstacles,
+      overcomePlans: responses?.overcomePlans || defaultData.overcomePlans,
+
+      // Conditions B and C questions
+      outcomes: {
+        modified:
+          responses?.outcomes?.modified || defaultData.outcomes.modified,
+        focused: responses?.outcomes?.focused || defaultData.outcomes.focused,
+        interpreted:
+          responses?.outcomes?.interpreted || defaultData.outcomes.interpreted,
+        reacted: responses?.outcomes?.reacted || defaultData.outcomes.reacted,
+      },
+      obstaclesObj: {
+        SituationObstacle:
+          responses?.obstaclesObj?.SituationObstacle ||
+          defaultData.obstaclesObj.SituationObstacle,
+        ModificationObstacle:
+          responses?.obstaclesObj?.ModificationObstacle ||
+          defaultData.obstaclesObj.ModificationObstacle,
+        AttentionObstacle:
+          responses?.obstaclesObj?.AttentionObstacle ||
+          defaultData.obstaclesObj.AttentionObstacle,
+        InterpretationObstacle:
+          responses?.obstaclesObj?.InterpretationObstacle ||
+          defaultData.obstaclesObj.InterpretationObstacle,
+        ReactionObstacle:
+          responses?.obstaclesObj?.ReactionObstacle ||
+          defaultData.obstaclesObj.ReactionObstacle,
+      },
+      overcomePlansObj: {
+        SituationPlan:
+          responses?.overcomePlansObj?.SituationPlan ||
+          defaultData.overcomePlansObj.SituationPlan,
+        ModificationPlan:
+          responses?.overcomePlansObj?.ModificationPlan ||
+          defaultData.overcomePlansObj.ModificationPlan,
+        AttentionPlan:
+          responses?.overcomePlansObj?.AttentionPlan ||
+          defaultData.overcomePlansObj.AttentionPlan,
+        InterpretationPlan:
+          responses?.overcomePlansObj?.InterpretationPlan ||
+          defaultData.overcomePlansObj.InterpretationPlan,
+        ReactionPlan:
+          responses?.overcomePlansObj?.ReactionPlan ||
+          defaultData.overcomePlansObj.ReactionPlan,
+      },
+    };
+  };
+
   const [showPlan, setShowPlan] = useState(false); // whether right-side panel is shown
   const [selectedWeekOffset, setSelectedWeekOffset] = useState<number | null>(
     null
@@ -46,13 +163,9 @@ const OverviewPage: React.FC = () => {
   const [weeklyPlans, setWeeklyPlans] = useState<Map<string, WeeklyPlan>>(
     new Map()
   );
-  const [formData, setFormData] = useState<WeeklyPlanFormData>({
-    idealWeek: "",
-    obstacles: "",
-    preventActions: "",
-    actionDetails: "",
-    ifThenPlans: "",
-  });
+  const [formData, setFormData] = useState<WeeklyPlanFormData>(
+    createDefaultFormData()
+  );
   const [isSaving, setIsSaving] = useState(false);
 
   // Auth and recordings data
@@ -113,10 +226,10 @@ const OverviewPage: React.FC = () => {
       setWeeklyPlans((prev) => new Map(prev).set(weekKey, savedPlan));
       console.log("💾 Saved plan for week:", weekKey, savedPlan);
 
-      alert("Weekly behavior plan saved successfully!");
+      toast.success("Weekly behavior plan saved successfully!");
     } catch (error) {
       console.error("Error saving weekly plan:", error);
-      alert("Failed to save weekly plan. Please try again.");
+      toast.error("Failed to save weekly plan. Please try again.");
     } finally {
       setIsSaving(false);
     }
@@ -124,6 +237,92 @@ const OverviewPage: React.FC = () => {
 
   const handleFormChange = (field: keyof WeeklyPlanFormData, value: string) => {
     setFormData((prev) => ({ ...prev, [field]: value }));
+  };
+
+  const handleArrayChange = (
+    field: "obstacles" | "overcomePlans",
+    index: number,
+    value: string
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: prev[field].map((item, i) => (i === index ? value : item)),
+    }));
+  };
+
+  const addArrayItem = (field: "obstacles" | "overcomePlans") => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: [...prev[field], ""],
+    }));
+  };
+
+  // Handlers for conditions B and C
+  const handleOutcomeChange = (
+    field: keyof typeof formData.outcomes,
+    value: string
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      outcomes: {
+        ...prev.outcomes,
+        [field]: value,
+      },
+    }));
+  };
+
+  const handleObstacleChange = (
+    obstacleType: keyof typeof formData.obstaclesObj,
+    index: number,
+    value: string
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      obstaclesObj: {
+        ...prev.obstaclesObj,
+        [obstacleType]: prev.obstaclesObj[obstacleType].map((item, i) =>
+          i === index ? value : item
+        ),
+      },
+    }));
+  };
+
+  const addObstacleItem = (
+    obstacleType: keyof typeof formData.obstaclesObj
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      obstaclesObj: {
+        ...prev.obstaclesObj,
+        [obstacleType]: [...prev.obstaclesObj[obstacleType], ""],
+      },
+    }));
+  };
+
+  const handlePlanChange = (
+    planType: keyof typeof formData.overcomePlansObj,
+    index: number,
+    value: string
+  ) => {
+    setFormData((prev) => ({
+      ...prev,
+      overcomePlansObj: {
+        ...prev.overcomePlansObj,
+        [planType]: prev.overcomePlansObj[planType].map((item, i) =>
+          i === index ? value : item
+        ),
+      },
+    }));
+  };
+
+  const addPlanItem = (planType: keyof typeof formData.overcomePlansObj) => {
+    setFormData((prev) => ({
+      ...prev,
+      overcomePlansObj: {
+        ...prev.overcomePlansObj,
+        [planType]: [...prev.overcomePlansObj[planType], ""],
+      },
+    }));
   };
 
   const getSessionsForWeek = (
@@ -145,8 +344,6 @@ const OverviewPage: React.FC = () => {
 
     return allSessionsThisWeek;
   };
-
-  // getCurrentWeekSessions helper removed (unused)
 
   // Check if a plan exists for a specific week
   const hasPlanForWeek = (weekOffsetForPlan: number): boolean => {
@@ -175,7 +372,7 @@ const OverviewPage: React.FC = () => {
 
         if (plan) {
           setCurrentWeekPlan(plan);
-          setFormData(plan.responses);
+          setFormData(mergePlanResponses(plan.responses));
 
           // Store the plan in our weeklyPlans map
           const weekStart = startOfWeek(currentWeekDate, { weekStartsOn: 1 });
@@ -183,13 +380,7 @@ const OverviewPage: React.FC = () => {
           setWeeklyPlans((prev) => new Map(prev).set(weekKey, plan));
         } else {
           setCurrentWeekPlan(null);
-          setFormData({
-            idealWeek: "",
-            obstacles: "",
-            preventActions: "",
-            actionDetails: "",
-            ifThenPlans: "",
-          });
+          setFormData(createDefaultFormData());
         }
       } catch (error) {
         console.error("Error loading weekly plan:", error);
@@ -257,7 +448,7 @@ const OverviewPage: React.FC = () => {
 
         if (plan) {
           setCurrentWeekPlan(plan);
-          setFormData(plan.responses);
+          setFormData(mergePlanResponses(plan.responses));
 
           // Store the plan in our weeklyPlans map
           const weekStart = startOfWeek(selectedWeekDate, { weekStartsOn: 1 });
@@ -265,13 +456,7 @@ const OverviewPage: React.FC = () => {
           setWeeklyPlans((prev) => new Map(prev).set(weekKey, plan));
         } else {
           setCurrentWeekPlan(null);
-          setFormData({
-            idealWeek: "",
-            obstacles: "",
-            preventActions: "",
-            actionDetails: "",
-            ifThenPlans: "",
-          });
+          setFormData(createDefaultFormData());
         }
       } catch (error) {
         console.error("Error loading selected week plan:", error);
@@ -519,37 +704,910 @@ const OverviewPage: React.FC = () => {
 
                 {/* prompts + textareas */}
                 <div className="flex-1 space-y-4 overflow-y-auto">
-                  {prompts.map((prompt, idx) => {
-                    const fieldNames: (keyof WeeklyPlanFormData)[] = [
-                      "idealWeek",
-                      "obstacles",
-                      "preventActions",
-                      "actionDetails",
-                      "ifThenPlans",
-                    ];
-                    const fieldName = fieldNames[idx];
-
-                    return (
-                      <div key={idx} className="flex flex-col">
+                  {condition === "A" ? (
+                    // Condition A form
+                    <>
+                      {/* Q1: Wish */}
+                      <div className="flex flex-col">
                         <label
                           className="text-sm font-medium mb-1"
                           style={{ color: "#545454" }}
                         >
-                          {prompt}
+                          Q1. {promptsConditionA[0]}
                         </label>
                         <textarea
                           className="border rounded p-2 text-sm"
                           rows={3}
                           style={{ borderColor: "#d4d4d4", color: "#545454" }}
-                          value={formData[fieldName]}
+                          value={formData.wish}
                           onChange={(e) =>
-                            handleFormChange(fieldName, e.target.value)
+                            handleFormChange("wish", e.target.value)
                           }
-                          placeholder={`Enter your response for: ${prompt}`}
+                          placeholder="Enter your most important wish or concern..."
                         />
                       </div>
-                    );
-                  })}
+
+                      {/* Q2: Best Outcome */}
+                      <div className="flex flex-col">
+                        <label
+                          className="text-sm font-medium mb-1"
+                          style={{ color: "#545454" }}
+                        >
+                          Q2. {promptsConditionA[1]}
+                        </label>
+                        <textarea
+                          className="border rounded p-2 text-sm"
+                          rows={3}
+                          style={{ borderColor: "#d4d4d4", color: "#545454" }}
+                          value={formData.bestOutcome}
+                          onChange={(e) =>
+                            handleFormChange("bestOutcome", e.target.value)
+                          }
+                          placeholder="Describe the best possible outcome..."
+                        />
+                      </div>
+
+                      {/* Transition text */}
+                      <div className="flex flex-col">
+                        <p
+                          className="text-sm font-bold mb-4"
+                          style={{ color: "#545454" }}
+                        >
+                          Now, take a moment and imagine your obstacle and plan
+                          how you would act.
+                        </p>
+                      </div>
+
+                      {/* Q3: Obstacles */}
+                      <div className="flex flex-col">
+                        <label
+                          className="text-sm font-medium mb-1"
+                          style={{ color: "#545454" }}
+                        >
+                          Q3. {promptsConditionA[2]}
+                        </label>
+                        <div className="space-y-2">
+                          {formData.obstacles.map((obstacle, idx) => (
+                            <div key={idx} className="flex gap-2 items-center">
+                              <span
+                                className="text-sm"
+                                style={{ color: "#545454" }}
+                              >
+                                I want to try differently if
+                              </span>
+                              <input
+                                type="text"
+                                className="flex-1 border rounded p-2 text-sm bg-green-50"
+                                style={{
+                                  borderColor: "#d4d4d4",
+                                  color: "#545454",
+                                }}
+                                value={obstacle}
+                                onChange={(e) =>
+                                  handleArrayChange(
+                                    "obstacles",
+                                    idx,
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="[anticipated obstacle trigger]"
+                              />
+                              <span
+                                className="text-sm"
+                                style={{ color: "#545454" }}
+                              >
+                                occurs.
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => addArrayItem("obstacles")}
+                                className="px-3 py-2 text-blue-500 hover:text-blue-700 border border-blue-300 rounded hover:bg-blue-50 text-sm"
+                              >
+                                Add Another
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+
+                      {/* Q4: Overcome Plans */}
+                      <div className="flex flex-col">
+                        <label
+                          className="text-sm font-medium mb-1"
+                          style={{ color: "#545454" }}
+                        >
+                          Q4. {promptsConditionA[3]}
+                        </label>
+                        <div className="space-y-2">
+                          {formData.overcomePlans.map((plan, idx) => (
+                            <div key={idx} className="flex gap-2 items-center">
+                              <span
+                                className="text-sm"
+                                style={{ color: "#545454" }}
+                              >
+                                If the obstacles occur, then I will
+                              </span>
+                              <input
+                                type="text"
+                                className="flex-1 border rounded p-2 text-sm bg-green-50"
+                                style={{
+                                  borderColor: "#d4d4d4",
+                                  color: "#545454",
+                                }}
+                                value={plan}
+                                onChange={(e) =>
+                                  handleArrayChange(
+                                    "overcomePlans",
+                                    idx,
+                                    e.target.value
+                                  )
+                                }
+                                placeholder="[specific action or thought]"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => addArrayItem("overcomePlans")}
+                                className="px-3 py-2 text-blue-500 hover:text-blue-700 border border-blue-300 rounded hover:bg-blue-50 text-sm"
+                              >
+                                Add Another
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    </>
+                  ) : condition === "B" || condition === "C" ? (
+                    // Conditions B and C form
+                    <>
+                      {/* Q1: Wish */}
+                      <div className="flex flex-col">
+                        <label
+                          className="text-sm font-medium mb-1"
+                          style={{ color: "#545454" }}
+                        >
+                          Q1. {promptsConditionBC.q1}
+                        </label>
+                        <textarea
+                          className="border rounded p-2 text-sm"
+                          rows={3}
+                          style={{ borderColor: "#d4d4d4", color: "#545454" }}
+                          value={formData.wish}
+                          onChange={(e) =>
+                            handleFormChange("wish", e.target.value)
+                          }
+                          placeholder="Enter your most important wish or concern..."
+                        />
+                      </div>
+
+                      {/* Q2: Best Outcome */}
+                      <div className="flex flex-col">
+                        <label
+                          className="text-sm font-medium mb-1"
+                          style={{ color: "#545454" }}
+                        >
+                          Q2. {promptsConditionBC.q2}
+                        </label>
+                        <textarea
+                          className="border rounded p-2 text-sm"
+                          rows={3}
+                          style={{ borderColor: "#d4d4d4", color: "#545454" }}
+                          value={formData.bestOutcome}
+                          onChange={(e) =>
+                            handleFormChange("bestOutcome", e.target.value)
+                          }
+                          placeholder="Describe the best possible outcome..."
+                        />
+                      </div>
+
+                      {/* Transition text */}
+                      <div className="flex flex-col">
+                        <p
+                          className="text-sm font-bold mb-4"
+                          style={{ color: "#545454" }}
+                        >
+                          Now take a moment and imagine the outcome.
+                        </p>
+                      </div>
+
+                      {/* Q3: Outcomes */}
+                      <div className="flex flex-col">
+                        <label
+                          className="text-sm font-medium mb-1"
+                          style={{ color: "#545454" }}
+                        >
+                          Q3. {promptsConditionBC.q3}
+                        </label>
+                        <div className="space-y-2">
+                          <div className="flex gap-2 items-center">
+                            <span
+                              className="text-sm"
+                              style={{ color: "#545454" }}
+                            >
+                              Wish you a differently modified situation?:
+                            </span>
+                            <input
+                              type="text"
+                              className="flex-1 border rounded p-2 text-sm"
+                              style={{
+                                borderColor: "#d4d4d4",
+                                color: "#545454",
+                              }}
+                              value={formData.outcomes.modified}
+                              onChange={(e) =>
+                                handleOutcomeChange("modified", e.target.value)
+                              }
+                              placeholder="Enter your response..."
+                            />
+                          </div>
+                          <div className="flex gap-2 items-center">
+                            <span
+                              className="text-sm"
+                              style={{ color: "#545454" }}
+                            >
+                              Wish you a differently focused?:
+                            </span>
+                            <input
+                              type="text"
+                              className="flex-1 border rounded p-2 text-sm"
+                              style={{
+                                borderColor: "#d4d4d4",
+                                color: "#545454",
+                              }}
+                              value={formData.outcomes.focused}
+                              onChange={(e) =>
+                                handleOutcomeChange("focused", e.target.value)
+                              }
+                              placeholder="Enter your response..."
+                            />
+                          </div>
+                          <div className="flex gap-2 items-center">
+                            <span
+                              className="text-sm"
+                              style={{ color: "#545454" }}
+                            >
+                              Wish you a differently interpreted?:
+                            </span>
+                            <input
+                              type="text"
+                              className="flex-1 border rounded p-2 text-sm"
+                              style={{
+                                borderColor: "#d4d4d4",
+                                color: "#545454",
+                              }}
+                              value={formData.outcomes.interpreted}
+                              onChange={(e) =>
+                                handleOutcomeChange(
+                                  "interpreted",
+                                  e.target.value
+                                )
+                              }
+                              placeholder="Enter your response..."
+                            />
+                          </div>
+                          <div className="flex gap-2 items-center">
+                            <span
+                              className="text-sm"
+                              style={{ color: "#545454" }}
+                            >
+                              Wish you a differently reacted?:
+                            </span>
+                            <input
+                              type="text"
+                              className="flex-1 border rounded p-2 text-sm"
+                              style={{
+                                borderColor: "#d4d4d4",
+                                color: "#545454",
+                              }}
+                              value={formData.outcomes.reacted}
+                              onChange={(e) =>
+                                handleOutcomeChange("reacted", e.target.value)
+                              }
+                              placeholder="Enter your response..."
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Transition text */}
+                      <div className="flex flex-col">
+                        <p
+                          className="text-sm font-bold mb-4"
+                          style={{ color: "#545454" }}
+                        >
+                          Now, take a moment and imagine your obstacle and plan
+                          how you would act.
+                        </p>
+                      </div>
+
+                      {/* Q4: Obstacles */}
+                      <div className="flex flex-col">
+                        <label
+                          className="text-sm font-medium mb-1"
+                          style={{ color: "#545454" }}
+                        >
+                          Q4. {promptsConditionBC.q4}
+                        </label>
+                        <div className="space-y-4">
+                          {/* Situation Obstacles */}
+                          <div className="space-y-2">
+                            {formData.obstaclesObj.SituationObstacle.map(
+                              (obstacle, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex gap-2 items-center"
+                                >
+                                  <span
+                                    className="text-sm"
+                                    style={{ color: "#545454" }}
+                                  >
+                                    I want to try differently if
+                                  </span>
+                                  <input
+                                    type="text"
+                                    className="flex-1 border rounded p-2 text-sm bg-green-50"
+                                    style={{
+                                      borderColor: "#d4d4d4",
+                                      color: "#545454",
+                                    }}
+                                    value={obstacle}
+                                    onChange={(e) =>
+                                      handleObstacleChange(
+                                        "SituationObstacle",
+                                        idx,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="[anticipated obstacle trigger]"
+                                  />
+                                  <span
+                                    className="text-sm"
+                                    style={{ color: "#545454" }}
+                                  >
+                                    occurs.
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      addObstacleItem("SituationObstacle")
+                                    }
+                                    className="px-3 py-2 text-blue-500 hover:text-blue-700 border border-blue-300 rounded hover:bg-blue-50 text-sm"
+                                  >
+                                    Add Another
+                                  </button>
+                                </div>
+                              )
+                            )}
+                          </div>
+
+                          {/* Modification Obstacles */}
+                          <div className="space-y-2">
+                            <h4
+                              className="text-sm font-medium"
+                              style={{ color: "#545454" }}
+                            >
+                              Are there any inner obstacles in how you modify
+                              the situation?
+                            </h4>
+                            {formData.obstaclesObj.ModificationObstacle.map(
+                              (obstacle, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex gap-2 items-center"
+                                >
+                                  <span
+                                    className="text-sm"
+                                    style={{ color: "#545454" }}
+                                  >
+                                    I want to try differently if
+                                  </span>
+                                  <input
+                                    type="text"
+                                    className="flex-1 border rounded p-2 text-sm bg-green-50"
+                                    style={{
+                                      borderColor: "#d4d4d4",
+                                      color: "#545454",
+                                    }}
+                                    value={obstacle}
+                                    onChange={(e) =>
+                                      handleObstacleChange(
+                                        "ModificationObstacle",
+                                        idx,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="[anticipated obstacle trigger]"
+                                  />
+                                  <span
+                                    className="text-sm"
+                                    style={{ color: "#545454" }}
+                                  >
+                                    occurs.
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      addObstacleItem("ModificationObstacle")
+                                    }
+                                    className="px-3 py-2 text-blue-500 hover:text-blue-700 border border-blue-300 rounded hover:bg-blue-50 text-sm"
+                                  >
+                                    Add Another
+                                  </button>
+                                </div>
+                              )
+                            )}
+                          </div>
+
+                          {/* Attention Obstacles */}
+                          <div className="space-y-2">
+                            <h4
+                              className="text-sm font-medium"
+                              style={{ color: "#545454" }}
+                            >
+                              Are there any inner obstacles in what you focus
+                              on?
+                            </h4>
+                            {formData.obstaclesObj.AttentionObstacle.map(
+                              (obstacle, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex gap-2 items-center"
+                                >
+                                  <span
+                                    className="text-sm"
+                                    style={{ color: "#545454" }}
+                                  >
+                                    I want to try differently if
+                                  </span>
+                                  <input
+                                    type="text"
+                                    className="flex-1 border rounded p-2 text-sm bg-green-50"
+                                    style={{
+                                      borderColor: "#d4d4d4",
+                                      color: "#545454",
+                                    }}
+                                    value={obstacle}
+                                    onChange={(e) =>
+                                      handleObstacleChange(
+                                        "AttentionObstacle",
+                                        idx,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="[anticipated obstacle trigger]"
+                                  />
+                                  <span
+                                    className="text-sm"
+                                    style={{ color: "#545454" }}
+                                  >
+                                    occurs.
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      addObstacleItem("AttentionObstacle")
+                                    }
+                                    className="px-3 py-2 text-blue-500 hover:text-blue-700 border border-blue-300 rounded hover:bg-blue-50 text-sm"
+                                  >
+                                    Add Another
+                                  </button>
+                                </div>
+                              )
+                            )}
+                          </div>
+
+                          {/* Interpretation Obstacles */}
+                          <div className="space-y-2">
+                            <h4
+                              className="text-sm font-medium"
+                              style={{ color: "#545454" }}
+                            >
+                              Are there any inner obstacles in how you interpret
+                              the situation?
+                            </h4>
+                            {formData.obstaclesObj.InterpretationObstacle.map(
+                              (obstacle, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex gap-2 items-center"
+                                >
+                                  <span
+                                    className="text-sm"
+                                    style={{ color: "#545454" }}
+                                  >
+                                    I want to try differently if
+                                  </span>
+                                  <input
+                                    type="text"
+                                    className="flex-1 border rounded p-2 text-sm bg-green-50"
+                                    style={{
+                                      borderColor: "#d4d4d4",
+                                      color: "#545454",
+                                    }}
+                                    value={obstacle}
+                                    onChange={(e) =>
+                                      handleObstacleChange(
+                                        "InterpretationObstacle",
+                                        idx,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="[anticipated obstacle trigger]"
+                                  />
+                                  <span
+                                    className="text-sm"
+                                    style={{ color: "#545454" }}
+                                  >
+                                    occurs.
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      addObstacleItem("InterpretationObstacle")
+                                    }
+                                    className="px-3 py-2 text-blue-500 hover:text-blue-700 border border-blue-300 rounded hover:bg-blue-50 text-sm"
+                                  >
+                                    Add Another
+                                  </button>
+                                </div>
+                              )
+                            )}
+                          </div>
+
+                          {/* Reaction Obstacles */}
+                          <div className="space-y-2">
+                            <h4
+                              className="text-sm font-medium"
+                              style={{ color: "#545454" }}
+                            >
+                              Are there any inner obstacles in how you react?
+                            </h4>
+                            {formData.obstaclesObj.ReactionObstacle.map(
+                              (obstacle, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex gap-2 items-center"
+                                >
+                                  <span
+                                    className="text-sm"
+                                    style={{ color: "#545454" }}
+                                  >
+                                    I want to try differently if
+                                  </span>
+                                  <input
+                                    type="text"
+                                    className="flex-1 border rounded p-2 text-sm bg-green-50"
+                                    style={{
+                                      borderColor: "#d4d4d4",
+                                      color: "#545454",
+                                    }}
+                                    value={obstacle}
+                                    onChange={(e) =>
+                                      handleObstacleChange(
+                                        "ReactionObstacle",
+                                        idx,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="[anticipated obstacle trigger]"
+                                  />
+                                  <span
+                                    className="text-sm"
+                                    style={{ color: "#545454" }}
+                                  >
+                                    occurs.
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      addObstacleItem("ReactionObstacle")
+                                    }
+                                    className="px-3 py-2 text-blue-500 hover:text-blue-700 border border-blue-300 rounded hover:bg-blue-50 text-sm"
+                                  >
+                                    Add Another
+                                  </button>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Q5: Overcome Plans */}
+                      <div className="flex flex-col">
+                        <label
+                          className="text-sm font-medium mb-1"
+                          style={{ color: "#545454" }}
+                        >
+                          Q5. {promptsConditionBC.q5}
+                        </label>
+                        <div className="space-y-4">
+                          {/* Situation Plans */}
+                          <div className="space-y-2">
+                            <h4
+                              className="text-sm font-medium"
+                              style={{ color: "#545454" }}
+                            >
+                              Is there a different way you could select or avoid
+                              the situation?
+                            </h4>
+                            {formData.overcomePlansObj.SituationPlan.map(
+                              (plan, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex gap-2 items-center"
+                                >
+                                  <span
+                                    className="text-sm"
+                                    style={{ color: "#545454" }}
+                                  >
+                                    If the obstacles occur, then I will
+                                  </span>
+                                  <input
+                                    type="text"
+                                    className="flex-1 border rounded p-2 text-sm bg-green-50"
+                                    style={{
+                                      borderColor: "#d4d4d4",
+                                      color: "#545454",
+                                    }}
+                                    value={plan}
+                                    onChange={(e) =>
+                                      handlePlanChange(
+                                        "SituationPlan",
+                                        idx,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="[specific action or thought]"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => addPlanItem("SituationPlan")}
+                                    className="px-3 py-2 text-blue-500 hover:text-blue-700 border border-blue-300 rounded hover:bg-blue-50 text-sm"
+                                  >
+                                    Add Another
+                                  </button>
+                                </div>
+                              )
+                            )}
+                          </div>
+
+                          {/* Modification Plans */}
+                          <div className="space-y-2">
+                            <h4
+                              className="text-sm font-medium"
+                              style={{ color: "#545454" }}
+                            >
+                              How can you act differently to modify the
+                              situation?
+                            </h4>
+                            {formData.overcomePlansObj.ModificationPlan.map(
+                              (plan, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex gap-2 items-center"
+                                >
+                                  <span
+                                    className="text-sm"
+                                    style={{ color: "#545454" }}
+                                  >
+                                    If the obstacles occur, then I will
+                                  </span>
+                                  <input
+                                    type="text"
+                                    className="flex-1 border rounded p-2 text-sm bg-green-50"
+                                    style={{
+                                      borderColor: "#d4d4d4",
+                                      color: "#545454",
+                                    }}
+                                    value={plan}
+                                    onChange={(e) =>
+                                      handlePlanChange(
+                                        "ModificationPlan",
+                                        idx,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="[specific action or thought]"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      addPlanItem("ModificationPlan")
+                                    }
+                                    className="px-3 py-2 text-blue-500 hover:text-blue-700 border border-blue-300 rounded hover:bg-blue-50 text-sm"
+                                  >
+                                    Add Another
+                                  </button>
+                                </div>
+                              )
+                            )}
+                          </div>
+
+                          {/* Attention Plans */}
+                          <div className="space-y-2">
+                            <h4
+                              className="text-sm font-medium"
+                              style={{ color: "#545454" }}
+                            >
+                              How can you focus differently?
+                            </h4>
+                            {formData.overcomePlansObj.AttentionPlan.map(
+                              (plan, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex gap-2 items-center"
+                                >
+                                  <span
+                                    className="text-sm"
+                                    style={{ color: "#545454" }}
+                                  >
+                                    If the obstacles occur, then I will
+                                  </span>
+                                  <input
+                                    type="text"
+                                    className="flex-1 border rounded p-2 text-sm bg-green-50"
+                                    style={{
+                                      borderColor: "#d4d4d4",
+                                      color: "#545454",
+                                    }}
+                                    value={plan}
+                                    onChange={(e) =>
+                                      handlePlanChange(
+                                        "AttentionPlan",
+                                        idx,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="[specific action or thought]"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => addPlanItem("AttentionPlan")}
+                                    className="px-3 py-2 text-blue-500 hover:text-blue-700 border border-blue-300 rounded hover:bg-blue-50 text-sm"
+                                  >
+                                    Add Another
+                                  </button>
+                                </div>
+                              )
+                            )}
+                          </div>
+
+                          {/* Interpretation Plans */}
+                          <div className="space-y-2">
+                            <h4
+                              className="text-sm font-medium"
+                              style={{ color: "#545454" }}
+                            >
+                              How can you interpret the situation differently?
+                            </h4>
+                            {formData.overcomePlansObj.InterpretationPlan.map(
+                              (plan, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex gap-2 items-center"
+                                >
+                                  <span
+                                    className="text-sm"
+                                    style={{ color: "#545454" }}
+                                  >
+                                    If the obstacles occur, then I will
+                                  </span>
+                                  <input
+                                    type="text"
+                                    className="flex-1 border rounded p-2 text-sm bg-green-50"
+                                    style={{
+                                      borderColor: "#d4d4d4",
+                                      color: "#545454",
+                                    }}
+                                    value={plan}
+                                    onChange={(e) =>
+                                      handlePlanChange(
+                                        "InterpretationPlan",
+                                        idx,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="[specific action or thought]"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      addPlanItem("InterpretationPlan")
+                                    }
+                                    className="px-3 py-2 text-blue-500 hover:text-blue-700 border border-blue-300 rounded hover:bg-blue-50 text-sm"
+                                  >
+                                    Add Another
+                                  </button>
+                                </div>
+                              )
+                            )}
+                          </div>
+
+                          {/* Reaction Plans */}
+                          <div className="space-y-2">
+                            <h4
+                              className="text-sm font-medium"
+                              style={{ color: "#545454" }}
+                            >
+                              How can you react differently to the situation?
+                            </h4>
+                            {formData.overcomePlansObj.ReactionPlan.map(
+                              (plan, idx) => (
+                                <div
+                                  key={idx}
+                                  className="flex gap-2 items-center"
+                                >
+                                  <span
+                                    className="text-sm"
+                                    style={{ color: "#545454" }}
+                                  >
+                                    If the obstacles occur, then I will
+                                  </span>
+                                  <input
+                                    type="text"
+                                    className="flex-1 border rounded p-2 text-sm bg-green-50"
+                                    style={{
+                                      borderColor: "#d4d4d4",
+                                      color: "#545454",
+                                    }}
+                                    value={plan}
+                                    onChange={(e) =>
+                                      handlePlanChange(
+                                        "ReactionPlan",
+                                        idx,
+                                        e.target.value
+                                      )
+                                    }
+                                    placeholder="[specific action or thought]"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => addPlanItem("ReactionPlan")}
+                                    className="px-3 py-2 text-blue-500 hover:text-blue-700 border border-blue-300 rounded hover:bg-blue-50 text-sm"
+                                  >
+                                    Add Another
+                                  </button>
+                                </div>
+                              )
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </>
+                  ) : (
+                    // Original form (non-A condition)
+                    prompts.map((prompt, idx) => {
+                      const fieldNames: (keyof WeeklyPlanFormData)[] = [
+                        "idealWeek",
+                        "obstacles",
+                        "preventActions",
+                        "actionDetails",
+                        "ifThenPlans",
+                      ];
+                      const fieldName = fieldNames[idx];
+
+                      return (
+                        <div key={idx} className="flex flex-col">
+                          <label
+                            className="text-sm font-medium mb-1"
+                            style={{ color: "#545454" }}
+                          >
+                            {prompt}
+                          </label>
+                          <textarea
+                            className="border rounded p-2 text-sm"
+                            rows={3}
+                            style={{ borderColor: "#d4d4d4", color: "#545454" }}
+                            value={formData[fieldName] as string}
+                            onChange={(e) =>
+                              handleFormChange(fieldName, e.target.value)
+                            }
+                            placeholder={`Enter your response for: ${prompt}`}
+                          />
+                        </div>
+                      );
+                    })
+                  )}
                 </div>
 
                 {/* save button */}
@@ -681,7 +1739,7 @@ const DayBox: React.FC<{
     {/* recording sessions: blue circles + completion times */}
     {sessions.length > 0 && (
       <div className="mt-1 flex-1 flex flex-col gap-3 justify-center w-full">
-        {sessions.map((session, _) => (
+        {sessions.map((session) => (
           <div
             key={session.sessionId}
             className="flex items-center justify-center border w-full relative group cursor-pointer"
