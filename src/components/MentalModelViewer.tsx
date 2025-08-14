@@ -547,7 +547,11 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
           weeklyPlan: weeklyPlan
             ? {
                 idealWeek: weeklyPlan.responses.idealWeek,
-                obstacles: weeklyPlan.responses.obstacles,
+                wish: weeklyPlan.responses.wish,
+                bestOutcome: weeklyPlan.responses.bestOutcome,
+                outcomes: weeklyPlan.responses.outcomes,
+                obstaclesObj: weeklyPlan.responses.obstaclesObj,
+                overcomePlansObj: weeklyPlan.responses.overcomePlansObj,
                 preventActions: weeklyPlan.responses.preventActions,
                 actionDetails: weeklyPlan.responses.actionDetails,
                 ifThenPlans: weeklyPlan.responses.ifThenPlans,
