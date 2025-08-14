@@ -3,6 +3,7 @@
 // src/pages/OnboardingPage.tsx
 
 import React, { useState } from "react";
+import Logo from "../assets/logo.svg";
 import { useNavigate } from "react-router-dom";
 
 const OnboardingPage: React.FC = () => {
@@ -30,7 +31,7 @@ const OnboardingPage: React.FC = () => {
           <div className="flex flex-1 flex-col items-center justify-center px-4 text-center space-y-8">
             {/* Logo */}
             <img
-              src="src/assets/logo.svg"
+              src={Logo}
               alt="Logo"
               className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40"
             />
