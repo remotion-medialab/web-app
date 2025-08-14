@@ -14,15 +14,36 @@ export interface WeeklyPlan {
     actionDetails?: string;
     ifThenPlans?: string;
 
-    // New questions (for condition A)
+    // Condition A questions
     wish?: string;
     bestOutcome?: string;
     obstacles?: string[];
     overcomePlans?: string[];
+
+    // Conditions B and C questions
+    outcomes?: {
+      modified?: string;
+      focused?: string;
+      interpreted?: string;
+      reacted?: string;
+    };
+    obstaclesObj?: {
+      SituationObstacle?: string[];
+      ModificationObstacle?: string[];
+      AttentionObstacle?: string[];
+      InterpretationObstacle?: string[];
+      ReactionObstacle?: string[];
+    };
+    overcomePlansObj?: {
+      SituationPlan?: string[];
+      ModificationPlan?: string[];
+      AttentionPlan?: string[];
+      InterpretationPlan?: string[];
+      ReactionPlan?: string[];
+    };
   };
 
   isCompleted: boolean;
-
   associatedSessionIds: string[];
 }
 
@@ -34,9 +55,31 @@ export interface WeeklyPlanFormData {
   actionDetails: string;
   ifThenPlans: string;
 
-  // New questions (for condition A)
+  // Condition A questions
   wish: string;
   bestOutcome: string;
   obstacles: string[];
   overcomePlans: string[];
+
+  // Conditions B and C questions
+  outcomes: {
+    modified: string;
+    focused: string;
+    interpreted: string;
+    reacted: string;
+  };
+  obstaclesObj: {
+    SituationObstacle: string[];
+    ModificationObstacle: string[];
+    AttentionObstacle: string[];
+    InterpretationObstacle: string[];
+    ReactionObstacle: string[];
+  };
+  overcomePlansObj: {
+    SituationPlan: string[];
+    ModificationPlan: string[];
+    AttentionPlan: string[];
+    InterpretationPlan: string[];
+    ReactionPlan: string[];
+  };
 }

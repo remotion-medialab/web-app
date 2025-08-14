@@ -1,21 +1,20 @@
-
-import { db } from './firebase';
-import { 
-  collection, 
-  doc, 
-  setDoc, 
-  getDoc, 
-  getDocs, 
-  query, 
-  orderBy, 
-  Timestamp 
-} from 'firebase/firestore';
-import { startOfWeek, endOfWeek, format } from 'date-fns';
-import type { WeeklyPlan, WeeklyPlanFormData } from '../types/weeklyPlan';
+import { db } from "./firebase";
+import {
+  collection,
+  doc,
+  setDoc,
+  getDoc,
+  getDocs,
+  query,
+  orderBy,
+  Timestamp,
+} from "firebase/firestore";
+import { startOfWeek, endOfWeek, format } from "date-fns";
+import type { WeeklyPlan, WeeklyPlanFormData } from "../types/weeklyPlan";
 
 export class WeeklyPlanService {
   // Move plans under user-scoped path
-  private static ROOT = 'users';
+  private static ROOT = "users";
 
   /**
    * Get the week start and end dates for a given date
@@ -23,12 +22,12 @@ export class WeeklyPlanService {
   static getWeekBounds(date: Date) {
     const weekStart = startOfWeek(date, { weekStartsOn: 1 }); // Monday
     const weekEnd = endOfWeek(date, { weekStartsOn: 1 }); // Sunday
-    
+
     return {
-      weekStartDate: format(weekStart, 'yyyy-MM-dd'),
-      weekEndDate: format(weekEnd, 'yyyy-MM-dd'),
+      weekStartDate: format(weekStart, "yyyy-MM-dd"),
+      weekEndDate: format(weekEnd, "yyyy-MM-dd"),
       weekStart,
-      weekEnd
+      weekEnd,
     };
   }
 
@@ -36,16 +35,36 @@ export class WeeklyPlanService {
    * Create or update a weekly plan
    */
   static async saveWeeklyPlan(
-    userId: string, 
-    formData: WeeklyPlanFormData, 
+    userId: string,
+    formData: WeeklyPlanFormData,
     targetDate: Date = new Date()
   ): Promise<WeeklyPlan> {
     const { weekStartDate, weekEndDate } = this.getWeekBounds(targetDate);
     const planId = `${userId}_${weekStartDate}`;
-    
+
     // Check if plan already exists
     const existingPlan = await this.getWeeklyPlan(userId, targetDate);
-    
+
+    // Transform formData to match the responses structure
+    const responses = {
+      // Original questions (for non-A condition)
+      // idealWeek: formData.idealWeek,
+      // preventActions: formData.preventActions,
+      // actionDetails: formData.actionDetails,
+      // ifThenPlans: formData.ifThenPlans,
+
+      // Condition A questions
+      wish: formData.wish,
+      bestOutcome: formData.bestOutcome,
+      obstacles: formData.obstacles,
+      overcomePlans: formData.overcomePlans,
+
+      // Conditions B and C questions
+      outcomes: formData.outcomes,
+      obstaclesObj: formData.obstaclesObj,
+      overcomePlansObj: formData.overcomePlansObj,
+    };
+
     const planData: WeeklyPlan = {
       id: planId,
       userId,
@@ -53,43 +72,46 @@ export class WeeklyPlanService {
       weekEndDate,
       createdAt: existingPlan?.createdAt || new Date(),
       updatedAt: new Date(),
-      responses: formData,
+      responses,
       isCompleted: true,
-      associatedSessionIds: existingPlan?.associatedSessionIds || []
+      associatedSessionIds: existingPlan?.associatedSessionIds || [],
     };
-    
+
     const docData = {
       ...planData,
       createdAt: Timestamp.fromDate(planData.createdAt),
-      updatedAt: Timestamp.fromDate(planData.updatedAt)
+      updatedAt: Timestamp.fromDate(planData.updatedAt),
     };
-    
-    const docRef = doc(db, this.ROOT, userId, 'weeklyPlans', planId);
+
+    const docRef = doc(db, this.ROOT, userId, "weeklyPlans", planId);
     await setDoc(docRef, docData);
-    
-    console.log('✅ Weekly plan saved to Firestore:', planId);
+
+    console.log("✅ Weekly plan saved to Firestore:", planId);
     return planData;
   }
 
   /**
    * Get weekly plan for a specific week
    */
-  static async getWeeklyPlan(userId: string, targetDate: Date = new Date()): Promise<WeeklyPlan | null> {
+  static async getWeeklyPlan(
+    userId: string,
+    targetDate: Date = new Date()
+  ): Promise<WeeklyPlan | null> {
     const { weekStartDate } = this.getWeekBounds(targetDate);
     const planId = `${userId}_${weekStartDate}`;
-    
-    const docRef = doc(db, this.ROOT, userId, 'weeklyPlans', planId);
+
+    const docRef = doc(db, this.ROOT, userId, "weeklyPlans", planId);
     const docSnap = await getDoc(docRef);
-    
+
     if (!docSnap.exists()) {
       return null;
     }
-    
+
     const data = docSnap.data();
     return {
       ...data,
       createdAt: data.createdAt.toDate(),
-      updatedAt: data.updatedAt.toDate()
+      updatedAt: data.updatedAt.toDate(),
     } as WeeklyPlan;
   }
 
@@ -98,17 +120,17 @@ export class WeeklyPlanService {
    */
   static async getUserWeeklyPlans(userId: string): Promise<WeeklyPlan[]> {
     const q = query(
-      collection(db, this.ROOT, userId, 'weeklyPlans'),
-      orderBy('weekStartDate', 'desc')
+      collection(db, this.ROOT, userId, "weeklyPlans"),
+      orderBy("weekStartDate", "desc")
     );
-    
+
     const querySnapshot = await getDocs(q);
-    return querySnapshot.docs.map(doc => {
+    return querySnapshot.docs.map((doc) => {
       const data = doc.data();
       return {
         ...data,
         createdAt: data.createdAt.toDate(),
-        updatedAt: data.updatedAt.toDate()
+        updatedAt: data.updatedAt.toDate(),
       } as WeeklyPlan;
     });
   }
@@ -125,28 +147,32 @@ export class WeeklyPlanService {
    * Associate recording sessions with a weekly plan
    */
   static async associateSessionsWithPlan(
-    userId: string, 
-    sessionIds: string[], 
+    userId: string,
+    sessionIds: string[],
     targetDate: Date = new Date()
   ): Promise<void> {
     const { weekStartDate } = this.getWeekBounds(targetDate);
     const planId = `${userId}_${weekStartDate}`;
-    
+
     const existingPlan = await this.getWeeklyPlan(userId, targetDate);
     if (!existingPlan) {
       return; // No plan to associate with
     }
 
     const updatedAssociatedSessions = [
-      ...new Set([...existingPlan.associatedSessionIds, ...sessionIds])
+      ...new Set([...existingPlan.associatedSessionIds, ...sessionIds]),
     ];
 
-    const docRef = doc(db, this.ROOT, userId, 'weeklyPlans', planId);
-    await setDoc(docRef, {
-      ...existingPlan,
-      associatedSessionIds: updatedAssociatedSessions,
-      updatedAt: Timestamp.fromDate(new Date())
-    }, { merge: true });
+    const docRef = doc(db, this.ROOT, userId, "weeklyPlans", planId);
+    await setDoc(
+      docRef,
+      {
+        ...existingPlan,
+        associatedSessionIds: updatedAssociatedSessions,
+        updatedAt: Timestamp.fromDate(new Date()),
+      },
+      { merge: true }
+    );
   }
 
   /**
@@ -154,6 +180,6 @@ export class WeeklyPlanService {
    */
   static getWeekDisplayRange(date: Date = new Date()): string {
     const { weekStart, weekEnd } = this.getWeekBounds(date);
-    return `${format(weekStart, 'MMM d')} - ${format(weekEnd, 'MMM d, yyyy')}`;
+    return `${format(weekStart, "MMM d")} - ${format(weekEnd, "MMM d, yyyy")}`;
   }
 }
