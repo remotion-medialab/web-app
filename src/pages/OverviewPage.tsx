@@ -1617,7 +1617,7 @@ const OverviewPage: React.FC = () => {
                 <button
                   onClick={handleSave}
                   disabled={isSaving}
-                  className="mt-4 self-end bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+                  className="mt-6 self-center bg-blue-500 text-white px-6 py-2 rounded hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
                 >
                   {isSaving && (
                     <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>

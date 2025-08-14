@@ -182,7 +182,10 @@ const SignInPage: React.FC = () => {
         )}
 
         {step === 1 && (
-          <form onSubmit={handleSignIn} className="space-y-6">
+          <form
+            onSubmit={handleSignIn}
+            className="space-y-6 flex flex-col items-center w-full max-w-md mx-auto"
+          >
             <h2 className="text-xl font-medium mt-8">
               Sign in to your account
             </h2>
@@ -193,7 +196,7 @@ const SignInPage: React.FC = () => {
               </div>
             )}
 
-            <div className="space-y-4">
+            <div className="space-y-4 w-full flex flex-col items-center">
               <input
                 type="email"
                 value={email}
@@ -214,7 +217,7 @@ const SignInPage: React.FC = () => {
               />
             </div>
 
-            <div className="flex justify-center space-x-4 mt-8">
+            <div className="flex justify-center space-x-4 mt-8 w-full">
               <button
                 type="button"
                 onClick={prevStep}
@@ -245,7 +248,10 @@ const SignInPage: React.FC = () => {
         )}
 
         {step === 2 && (
-          <form onSubmit={handleSignUp} className="space-y-6">
+          <form
+            onSubmit={handleSignUp}
+            className="space-y-6 flex flex-col items-center w-full max-w-md mx-auto"
+          >
             <h2 className="text-xl font-medium mt-8">Create your account</h2>
 
             {error && (
@@ -254,7 +260,7 @@ const SignInPage: React.FC = () => {
               </div>
             )}
 
-            <div className="space-y-4">
+            <div className="space-y-4 w-full flex flex-col items-center">
               <input
                 type="email"
                 value={email}
@@ -309,7 +315,7 @@ const SignInPage: React.FC = () => {
               />
             </div>
 
-            <div className="flex space-x-4 mt-8">
+            <div className="flex justify-center space-x-4 mt-8 w-full">
               <button
                 type="button"
                 onClick={prevStep}
