@@ -47,7 +47,7 @@ const OverviewPage: React.FC = () => {
   // Helper function to create default form data
   const createDefaultFormData = (): WeeklyPlanFormData => ({
     idealWeek: "",
-    obstacles: "",
+    obstaclesText: "",
     preventActions: "",
     actionDetails: "",
     ifThenPlans: "",
@@ -86,7 +86,8 @@ const OverviewPage: React.FC = () => {
       ...defaultData,
       // Original questions
       idealWeek: responses?.idealWeek || defaultData.idealWeek,
-      obstacles: responses?.obstacles || defaultData.obstacles,
+      obstaclesText:
+        (responses as any)?.obstaclesText || defaultData.obstaclesText,
       preventActions: responses?.preventActions || defaultData.preventActions,
       actionDetails: responses?.actionDetails || defaultData.actionDetails,
       ifThenPlans: responses?.ifThenPlans || defaultData.ifThenPlans,
@@ -246,7 +247,9 @@ const OverviewPage: React.FC = () => {
   ) => {
     setFormData((prev) => ({
       ...prev,
-      [field]: prev[field].map((item, i) => (i === index ? value : item)),
+      [field]: (prev as any)[field].map((item: string, i: number) =>
+        i === index ? value : item
+      ),
     }));
   };
 
@@ -491,10 +494,10 @@ const OverviewPage: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 p-4 flex justify-center items-center">
+    <div className="min-h-screen h-screen bg-gray-50 p-4 flex justify-center items-stretch">
       {/* Main white card container */}
       <div
-        className={`h-full w-full bg-white border rounded-lg p-6 flex ${
+        className={`h-full w-full bg-white border rounded-lg p-6 flex overflow-hidden min-h-0 h-[calc(100vh-2rem)] ${
           showPlan || selectedSession || selectedRecording
             ? "flex-row gap-4"
             : "flex-col"
@@ -508,7 +511,7 @@ const OverviewPage: React.FC = () => {
               : showPlan || selectedSession
               ? "w-1/2"
               : "w-full"
-          } flex flex-col`}
+          } flex flex-col min-h-0 overflow-y-auto`}
         >
           {/* header + date range + arrows */}
           <div className="flex justify-between items-center">
@@ -573,7 +576,7 @@ const OverviewPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col mt-4 space-y-4">
+          <div className="flex-1 flex flex-col mt-4 space-y-4 min-h-0 overflow-y-auto">
             {/* day-of-week headers */}
             <div className="grid grid-cols-7 gap-2">
               {dayHeaders.map((day) => (
@@ -662,7 +665,7 @@ const OverviewPage: React.FC = () => {
           <div
             className={`${
               selectedRecording && condition !== "A" ? "w-1/3" : "w-1/2"
-            } bg-white border rounded-lg p-6 flex flex-col overflow-y-auto`}
+            } bg-white border rounded-lg p-6 flex flex-col overflow-y-auto min-h-0 h-full`}
           >
             {showPlan ? (
               <>
@@ -1579,7 +1582,7 @@ const OverviewPage: React.FC = () => {
                     prompts.map((prompt, idx) => {
                       const fieldNames: (keyof WeeklyPlanFormData)[] = [
                         "idealWeek",
-                        "obstacles",
+                        "obstaclesText",
                         "preventActions",
                         "actionDetails",
                         "ifThenPlans",
@@ -1649,7 +1652,7 @@ const OverviewPage: React.FC = () => {
         {/* RIGHT panel: Mental Model Viewer */}
         {(selectedRecording || (selectedSession && showMentalModel)) &&
           condition !== "A" && (
-            <div className="w-1/3 flex flex-col">
+            <div className="w-1/3 flex flex-col min-h-0 overflow-y-auto">
               <MentalModelViewer
                 session={selectedSession!}
                 onClose={() => {

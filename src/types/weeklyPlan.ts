@@ -9,7 +9,7 @@ export interface WeeklyPlan {
   responses: {
     // Original questions (for non-A condition)
     idealWeek?: string;
-    obstacles?: string;
+    obstaclesText?: string;
     preventActions?: string;
     actionDetails?: string;
     ifThenPlans?: string;
@@ -50,7 +50,7 @@ export interface WeeklyPlan {
 export interface WeeklyPlanFormData {
   // Original questions (for non-A condition)
   idealWeek: string;
-  obstacles: string;
+  obstaclesText: string;
   preventActions: string;
   actionDetails: string;
   ifThenPlans: string;
