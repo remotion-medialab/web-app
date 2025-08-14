@@ -6,6 +6,8 @@ import { useAuth } from "../contexts/AuthContext";
 import { useRecordings } from "../hooks/useRecordings";
 import type { RecordingSession } from "../lib/recordingsService";
 import SessionDetailView from "../components/SessionDetailView";
+import StickyIcon from "../assets/stickynote.svg";
+import NoteAddIcon from "../assets/note-add.svg";
 import MentalModelViewer from "../components/MentalModelViewer";
 import type { Recording } from "../lib/recordingsService";
 import { WeeklyPlanService } from "../lib/weeklyPlanService";
@@ -628,9 +630,7 @@ const PlanButton: React.FC<{
     }}
   >
     <img
-      src={
-        planCreated ? "src/assets/stickynote.svg" : "src/assets/note-add.svg"
-      }
+      src={planCreated ? StickyIcon : NoteAddIcon}
       alt="icon"
       className="w-4 h-4 mr-2"
     />

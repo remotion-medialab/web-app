@@ -8,6 +8,7 @@ import {
 } from "firebase/auth";
 import { auth, db } from "../lib/firebase";
 import { doc, setDoc, getDoc } from "firebase/firestore";
+import Logo from "../assets/logo.svg";
 
 const SignInPage: React.FC = () => {
   const [step, setStep] = useState(0); // 0: Welcome, 1: Sign In, 2: Sign Up
@@ -31,15 +32,19 @@ const SignInPage: React.FC = () => {
     setError("");
 
     try {
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
+      const userCredential = await signInWithEmailAndPassword(
+        auth,
+        email,
+        password
+      );
+
       // Fetch user condition from Firebase after successful sign-in
       try {
         const profileRef = doc(db, "users", userCredential.user.uid);
         const snap = await getDoc(profileRef);
         const data = snap.exists() ? snap.data() : null;
         const condition = data?.condition as "A" | "B" | "C" | undefined;
-        
+
         // Cache the condition locally for immediate access
         if (condition) {
           localStorage.setItem("userCondition", condition);
@@ -47,10 +52,12 @@ const SignInPage: React.FC = () => {
       } catch (e) {
         console.warn("⚠️ Failed to load user condition after sign-in", e);
       }
-      
+
       navigate("/insights");
-    } catch (error: any) {
-      setError(error.message || "Sign in failed");
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      setError(errorMessage || "Sign in failed");
     } finally {
       setLoading(false);
     }
@@ -73,20 +80,24 @@ const SignInPage: React.FC = () => {
       // Save condition locally for instant gating
       try {
         localStorage.setItem("userCondition", condition);
-      } catch {}
+      } catch (e) {
+        console.warn("⚠️ Failed to load user condition after sign-in", e);
+      }
       // Also persist to Firestore (kept for cross-device coherence)
       await setDoc(
         doc(db, "users", cred.user.uid),
-        { 
-          condition, 
+        {
+          condition,
           createdAt: new Date(),
-          lastActive: new Date()
+          lastActive: new Date(),
         },
         { merge: true }
       );
       navigate("/insights");
-    } catch (error: any) {
-      setError(error.message || "Sign up failed");
+    } catch (error: unknown) {
+      const errorMessage =
+        error instanceof Error ? error.message : "Unknown error";
+      setError(errorMessage || "Sign up failed");
     } finally {
       setLoading(false);
     }
@@ -115,7 +126,7 @@ const SignInPage: React.FC = () => {
           <div className="flex flex-1 flex-col items-center justify-center px-4 text-center space-y-8">
             {/* Logo */}
             <img
-              src="src/assets/logo.svg"
+              src={Logo}
               alt="Logo"
               className="w-24 h-24 sm:w-32 sm:h-32 md:w-40 md:h-40"
             />
@@ -259,7 +270,9 @@ const SignInPage: React.FC = () => {
                 <label className="text-sm text-blue-600">Study Condition</label>
                 <select
                   value={condition}
-                  onChange={(e) => setCondition(e.target.value as any)}
+                  onChange={(e) =>
+                    setCondition(e.target.value as "A" | "B" | "C" | "")
+                  }
                   className="border border-blue-300 rounded-full px-4 py-2 w-64 text-center focus:outline-none focus:ring-2 focus:ring-blue-400"
                   disabled={loading}
                   required
