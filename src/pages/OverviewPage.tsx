@@ -28,7 +28,7 @@ const prompts = [
 
 // prompts for the Weekly Plan textarea fields (condition A)
 const promptsConditionA = [
-  "What is your most important wish or concern in your interpersonal life that you have recurring regrets about and want to change? Choose something challenging that you are likely to face in the next few days.",
+  "What is your most important wish or concern in your interpersonal life that you have recurring regrets about and want to change?  Choose something challenging that you are likely to face in the next few days.",
   "If you fulfilled this wish or goal, what would be the best possible outcome?",
   "What is it within you—your habits, reactions, or thoughts—that most holds you back from fulfilling this wish?",
   "List all the actions you could take or thoughts you could use to overcome this obstacle.",
@@ -710,6 +710,16 @@ const OverviewPage: React.FC = () => {
                   {condition === "A" ? (
                     // Condition A form
                     <>
+                      {/* Transition text */}
+                      <div className="flex flex-col">
+                        <p
+                          className="text-sm font-bold sm:mt-10 sm:mb-2"
+                          style={{ color: "#545454" }}
+                        >
+                         What is your overall goal?
+                        </p>
+                      </div>
+                      
                       {/* Q1: Wish */}
                       <div className="flex flex-col">
                         <label
@@ -753,11 +763,21 @@ const OverviewPage: React.FC = () => {
                       {/* Transition text */}
                       <div className="flex flex-col">
                         <p
-                          className="text-sm font-bold mb-4"
+                          className="text-sm italic sm:mt-10 sm:mb-10"
                           style={{ color: "#545454" }}
                         >
-                          Now, take a moment and imagine your obstacle and plan
-                          how you would act.
+                          Now, <br /> take a moment and imagine the outcome... <br />
+                          Imagine things fully...
+                        </p>
+                      </div>
+
+                      {/* Transition text */}
+                      <div className="flex flex-col">
+                        <p
+                          className="text-sm font-bold sm:mb-2"
+                          style={{ color: "#545454" }}
+                        >
+                          With your best effort, please identify obstacles as much as you can.
                         </p>
                       </div>
 
@@ -813,6 +833,26 @@ const OverviewPage: React.FC = () => {
                         </div>
                       </div>
 
+                        {/* Transition text */}
+                      <div className="flex flex-col">
+                        <p
+                          className="text-sm italic sm:mt-10 sm:mb-10"
+                          style={{ color: "#545454" }}
+                        >
+                          Now, <br /> take a moment and imagine your obstacles... <br />
+                          Imagine things fully...
+                        </p>
+                      </div>
+
+                        {/* Transition text */}
+                      <div className="flex flex-col">
+                        <p
+                          className="text-sm font-bold  sm:mb-2"
+                          style={{ color: "#545454" }}
+                        >
+                          With your best effort, please plan as much as you can.
+                        </p>
+                      </div>
                       {/* Q4: Overcome Plans */}
                       <div className="flex flex-col">
                         <label
@@ -858,10 +898,30 @@ const OverviewPage: React.FC = () => {
                           ))}
                         </div>
                       </div>
+                                              {/* Transition text */}
+                      <div className="flex flex-col">
+                        <p
+                          className="text-sm italic sm:mt-10 "
+                          style={{ color: "#545454" }}
+                        >
+
+                        </p>
+                      </div>
+
                     </>
                   ) : condition === "B" || condition === "C" ? (
                     // Conditions B and C form
                     <>
+                      {/* Transition text */}
+                      <div className="flex flex-col">
+                        <p
+                          className="text-sm font-bold sm:mt-5"
+                          style={{ color: "#545454" }}
+                        >
+                          What's your Wish or Regret?
+                        </p>
+                      </div>
+
                       {/* Q1: Wish */}
                       <div className="flex flex-col">
                         <label
@@ -905,123 +965,23 @@ const OverviewPage: React.FC = () => {
                       {/* Transition text */}
                       <div className="flex flex-col">
                         <p
-                          className="text-sm font-bold mb-4"
+                          className="text-sm italic sm:mt-10 sm:mb-10"
                           style={{ color: "#545454" }}
                         >
-                          Now take a moment and imagine the outcome.
+                          Now, <br /> take a moment and imagine the outcome... <br />
+                          Imagine things fully...
                         </p>
-                      </div>
-
-                      {/* Q3: Outcomes */}
-                      <div className="flex flex-col">
-                        <label
-                          className="text-sm font-medium mb-1"
-                          style={{ color: "#545454" }}
-                        >
-                          Q3. {promptsConditionBC.q3}
-                        </label>
-                        <div className="space-y-2">
-                          <div className="flex gap-2 items-center">
-                            <span
-                              className="text-sm"
-                              style={{ color: "#545454" }}
-                            >
-                              Wish you a differently modified situation?:
-                            </span>
-                            <input
-                              type="text"
-                              className="flex-1 border rounded p-2 text-sm"
-                              style={{
-                                borderColor: "#d4d4d4",
-                                color: "#545454",
-                              }}
-                              value={formData.outcomes.modified}
-                              onChange={(e) =>
-                                handleOutcomeChange("modified", e.target.value)
-                              }
-                              placeholder="Enter your response..."
-                            />
-                          </div>
-                          <div className="flex gap-2 items-center">
-                            <span
-                              className="text-sm"
-                              style={{ color: "#545454" }}
-                            >
-                              Wish you a differently focused?:
-                            </span>
-                            <input
-                              type="text"
-                              className="flex-1 border rounded p-2 text-sm"
-                              style={{
-                                borderColor: "#d4d4d4",
-                                color: "#545454",
-                              }}
-                              value={formData.outcomes.focused}
-                              onChange={(e) =>
-                                handleOutcomeChange("focused", e.target.value)
-                              }
-                              placeholder="Enter your response..."
-                            />
-                          </div>
-                          <div className="flex gap-2 items-center">
-                            <span
-                              className="text-sm"
-                              style={{ color: "#545454" }}
-                            >
-                              Wish you a differently interpreted?:
-                            </span>
-                            <input
-                              type="text"
-                              className="flex-1 border rounded p-2 text-sm"
-                              style={{
-                                borderColor: "#d4d4d4",
-                                color: "#545454",
-                              }}
-                              value={formData.outcomes.interpreted}
-                              onChange={(e) =>
-                                handleOutcomeChange(
-                                  "interpreted",
-                                  e.target.value
-                                )
-                              }
-                              placeholder="Enter your response..."
-                            />
-                          </div>
-                          <div className="flex gap-2 items-center">
-                            <span
-                              className="text-sm"
-                              style={{ color: "#545454" }}
-                            >
-                              Wish you a differently reacted?:
-                            </span>
-                            <input
-                              type="text"
-                              className="flex-1 border rounded p-2 text-sm"
-                              style={{
-                                borderColor: "#d4d4d4",
-                                color: "#545454",
-                              }}
-                              value={formData.outcomes.reacted}
-                              onChange={(e) =>
-                                handleOutcomeChange("reacted", e.target.value)
-                              }
-                              placeholder="Enter your response..."
-                            />
-                          </div>
-                        </div>
                       </div>
 
                       {/* Transition text */}
                       <div className="flex flex-col">
                         <p
-                          className="text-sm font-bold mb-4"
+                          className="text-sm font-bold "
                           style={{ color: "#545454" }}
                         >
-                          Now, take a moment and imagine your obstacle and plan
-                          how you would act.
+                          With your best effort, please identify obstacles for each stage as much as you can.
                         </p>
                       </div>
-
                       {/* Q4: Obstacles */}
                       <div className="flex flex-col">
                         <label
@@ -1315,10 +1275,32 @@ const OverviewPage: React.FC = () => {
                         </div>
                       </div>
 
+                      
+                      {/* Transition text */}
+                      <div className="flex flex-col">
+                        <p
+                          className="text-sm italic sm:mt-10 sm:mb-10"
+                          style={{ color: "#545454" }}
+                        >
+                          Now, <br /> take a moment and imagine your obstacles... <br />
+                          Imagine things fully...
+                        </p>
+                      </div>
+
+
+                      {/* Transition text */}
+                      <div className="flex flex-col">
+                        <p
+                          className="text-sm font-bold sm:mt-5"
+                          style={{ color: "#545454" }}
+                        >
+                          With your best effort, please plan for each stage as much as you can.
+                        </p>
+                      </div>
                       {/* Q5: Overcome Plans */}
                       <div className="flex flex-col">
                         <label
-                          className="text-sm font-medium mb-1"
+                          className="text-sm font-medium mb-3"
                           style={{ color: "#545454" }}
                         >
                           Q5. {promptsConditionBC.q5}
@@ -1330,8 +1312,7 @@ const OverviewPage: React.FC = () => {
                               className="text-sm font-medium"
                               style={{ color: "#545454" }}
                             >
-                              Is there a different way you could select or avoid
-                              the situation?
+                              Is there a different way you could select or avoid the situation?
                             </h4>
                             {formData.overcomePlansObj.SituationPlan.map(
                               (plan, idx) => (
@@ -1576,6 +1557,16 @@ const OverviewPage: React.FC = () => {
                           </div>
                         </div>
                       </div>
+
+                       {/* Transition text */}
+                      <div className="flex flex-col">
+                        <p
+                          className="text-sm font-bold  sm:mb-10"
+                          style={{ color: "#545454" }}
+                        >
+  
+                        </p>
+                      </div>
                     </>
                   ) : (
                     // Original form (non-A condition)
@@ -1592,7 +1583,7 @@ const OverviewPage: React.FC = () => {
                       return (
                         <div key={idx} className="flex flex-col">
                           <label
-                            className="text-sm font-medium mb-1"
+                            className="text-sm font-medium mb-3"
                             style={{ color: "#545454" }}
                           >
                             {prompt}
