@@ -260,19 +260,19 @@ const OverviewPage: React.FC = () => {
     }));
   };
 
-  // Handlers for conditions B and C
-  const handleOutcomeChange = (
-    field: keyof typeof formData.outcomes,
-    value: string
-  ) => {
-    setFormData((prev) => ({
-      ...prev,
-      outcomes: {
-        ...prev.outcomes,
-        [field]: value,
-      },
-    }));
-  };
+  // // Handlers for conditions B and C
+  // const handleOutcomeChange = (
+  //   field: keyof typeof formData.outcomes,
+  //   value: string
+  // ) => {
+  //   setFormData((prev) => ({
+  //     ...prev,
+  //     outcomes: {
+  //       ...prev.outcomes,
+  //       [field]: value,
+  //     },
+  //   }));
+  // };
 
   const handleObstacleChange = (
     obstacleType: keyof typeof formData.obstaclesObj,
