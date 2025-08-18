@@ -351,6 +351,11 @@ const SignInPage: React.FC = () => {
           </form>
         )}
       </div>
+
+      {/* Version */}
+      <div className="text-center py-4">
+        <span className="text-xs text-gray-400">v1.0.0</span>
+      </div>
     </div>
   );
 };
