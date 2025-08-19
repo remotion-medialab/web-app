@@ -135,7 +135,7 @@ export class RecordingsService {
               userId: toStringSafe(data.userId, userId),
               title: toStringSafe(data.title, "Untitled Recording"),
               duration: toNumberSafe(data.duration, 0),
-              stepNumber: toNumberSafe(data.stepNumber, 1),
+              stepNumber: toNumberSafe(data.stepNumber, 0),
               sessionNumber: toNumberSafe(
                 data.sessionNumber,
                 undefined as unknown as number
@@ -225,7 +225,7 @@ export class RecordingsService {
           userId: data.userId || userId,
           title: data.title || "Untitled Recording",
           duration: data.duration || 0,
-          stepNumber: data.stepNumber || 1,
+          stepNumber: data.stepNumber || 0,
           sessionNumber: data.sessionNumber,
           question: data.question,
           createdAt:

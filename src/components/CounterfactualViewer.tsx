@@ -293,7 +293,7 @@ export const CounterfactualViewer: React.FC<CounterfactualViewerProps> = ({
         if (result.cfLogs) {
           setCfLogsData((prev) => ({
             ...prev,
-            [`${sessionId}_step_${stepNumber}`]: result.cfLogs,
+            [`${sessionId}_step-${stepNumber}`]: result.cfLogs,
           }));
           console.log(
             "📊 CF Logs data stored for step:",
