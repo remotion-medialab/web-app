@@ -576,7 +576,7 @@ const OverviewPage: React.FC = () => {
             </div>
           </div>
 
-          <div className="flex-1 flex flex-col mt-4 space-y-4 min-h-0 overflow-y-auto">
+          <div className="flex-1 flex flex-col mt-4 space-y-8 min-h-0 overflow-y-auto">
             {/* day-of-week headers */}
             <div className="grid grid-cols-7 gap-2">
               {dayHeaders.map((day) => (
@@ -591,30 +591,32 @@ const OverviewPage: React.FC = () => {
             </div>
 
             {/* TOP WEEK ROW */}
-            <WeekPanel>
-              {weekDates.slice(0, 7).map((date, idx) => (
-                <DayBox
-                  key={idx}
-                  date={date}
-                  sessions={getSessionsForDate(date)}
-                  isToday={
-                    format(date, "yyyy-MM-dd") === format(today, "yyyy-MM-dd")
-                  }
-                  showPlan={showPlan || !!selectedSession}
-                  requiredSteps={condition === "A" ? 1 : 5}
-                  onSessionClick={(session) => {
-                    setSelectedSession(session);
-                    // Unselect weekly plan when a recording is clicked
-                    if (showPlan) {
-                      setShowPlan(false);
-                      setSelectedWeekOffset(null);
+            <div className="space-y-4">
+              <WeekPanel>
+                {weekDates.slice(0, 7).map((date, idx) => (
+                  <DayBox
+                    key={idx}
+                    date={date}
+                    sessions={getSessionsForDate(date)}
+                    isToday={
+                      format(date, "yyyy-MM-dd") === format(today, "yyyy-MM-dd")
                     }
-                  }}
-                />
-              ))}
+                    showPlan={showPlan || !!selectedSession}
+                    requiredSteps={condition === "A" ? 1 : 5}
+                    onSessionClick={(session) => {
+                      setSelectedSession(session);
+                      // Unselect weekly plan when a recording is clicked
+                      if (showPlan) {
+                        setShowPlan(false);
+                        setSelectedWeekOffset(null);
+                      }
+                    }}
+                  />
+                ))}
+              </WeekPanel>
 
               {/* button under top week */}
-              <div className="col-span-7 flex justify-center mt-2">
+              <div className="flex justify-center">
                 <PlanButton
                   onClick={() => handlePlanButton(weekOffset)}
                   showPlan={showPlan && selectedWeekOffset === weekOffset}
@@ -624,29 +626,32 @@ const OverviewPage: React.FC = () => {
                   )}
                 />
               </div>
-            </WeekPanel>
+            </div>
 
             {/* BOTTOM WEEK ROW */}
-            <WeekPanel>
-              {weekDates.map((date, idx) => (
-                <DayBox
-                  key={idx + 7}
-                  date={addDays(date, 7)}
-                  sessions={getSessionsForDate(addDays(date, 7))}
-                  requiredSteps={condition === "A" ? 1 : 5}
-                  showPlan={showPlan || !!selectedSession}
-                  onSessionClick={(session) => {
-                    setSelectedSession(session);
-                    // Unselect weekly plan when a recording is clicked
-                    if (showPlan) {
-                      setShowPlan(false);
-                      setSelectedWeekOffset(null);
-                    }
-                  }}
-                />
-              ))}
+            <div className="space-y-4">
+              <WeekPanel>
+                {weekDates.map((date, idx) => (
+                  <DayBox
+                    key={idx + 7}
+                    date={addDays(date, 7)}
+                    sessions={getSessionsForDate(addDays(date, 7))}
+                    requiredSteps={condition === "A" ? 1 : 5}
+                    showPlan={showPlan || !!selectedSession}
+                    onSessionClick={(session) => {
+                      setSelectedSession(session);
+                      // Unselect weekly plan when a recording is clicked
+                      if (showPlan) {
+                        setShowPlan(false);
+                        setSelectedWeekOffset(null);
+                      }
+                    }}
+                  />
+                ))}
+              </WeekPanel>
+
               {/* button under bottom week */}
-              <div className="col-span-7 flex justify-center mt-2">
+              <div className="flex justify-center">
                 <PlanButton
                   onClick={() => handlePlanButton(weekOffset + 1)}
                   showPlan={showPlan && selectedWeekOffset === weekOffset + 1}
@@ -656,7 +661,7 @@ const OverviewPage: React.FC = () => {
                   )}
                 />
               </div>
-            </WeekPanel>
+            </div>
           </div>
         </div>
 
@@ -716,10 +721,10 @@ const OverviewPage: React.FC = () => {
                           className="text-sm font-bold sm:mt-10 sm:mb-2"
                           style={{ color: "#545454" }}
                         >
-                         What is your overall goal?
+                          What is your overall goal?
                         </p>
                       </div>
-                      
+
                       {/* Q1: Wish */}
                       <div className="flex flex-col">
                         <label
@@ -766,7 +771,8 @@ const OverviewPage: React.FC = () => {
                           className="text-sm italic sm:mt-10 sm:mb-10"
                           style={{ color: "#545454" }}
                         >
-                          Now, <br /> take a moment and imagine the outcome... <br />
+                          Now, <br /> take a moment and imagine the outcome...{" "}
+                          <br />
                           Imagine things fully...
                         </p>
                       </div>
@@ -777,7 +783,8 @@ const OverviewPage: React.FC = () => {
                           className="text-sm font-bold sm:mb-2"
                           style={{ color: "#545454" }}
                         >
-                          With your best effort, please identify obstacles as much as you can.
+                          With your best effort, please identify obstacles as
+                          much as you can.
                         </p>
                       </div>
 
@@ -833,18 +840,19 @@ const OverviewPage: React.FC = () => {
                         </div>
                       </div>
 
-                        {/* Transition text */}
+                      {/* Transition text */}
                       <div className="flex flex-col">
                         <p
                           className="text-sm italic sm:mt-10 sm:mb-10"
                           style={{ color: "#545454" }}
                         >
-                          Now, <br /> take a moment and imagine your obstacles... <br />
+                          Now, <br /> take a moment and imagine your
+                          obstacles... <br />
                           Imagine things fully...
                         </p>
                       </div>
 
-                        {/* Transition text */}
+                      {/* Transition text */}
                       <div className="flex flex-col">
                         <p
                           className="text-sm font-bold  sm:mb-2"
@@ -898,16 +906,13 @@ const OverviewPage: React.FC = () => {
                           ))}
                         </div>
                       </div>
-                                              {/* Transition text */}
+                      {/* Transition text */}
                       <div className="flex flex-col">
                         <p
                           className="text-sm italic sm:mt-10 "
                           style={{ color: "#545454" }}
-                        >
-
-                        </p>
+                        ></p>
                       </div>
-
                     </>
                   ) : condition === "B" || condition === "C" ? (
                     // Conditions B and C form
@@ -968,7 +973,8 @@ const OverviewPage: React.FC = () => {
                           className="text-sm italic sm:mt-10 sm:mb-10"
                           style={{ color: "#545454" }}
                         >
-                          Now, <br /> take a moment and imagine the outcome... <br />
+                          Now, <br /> take a moment and imagine the outcome...{" "}
+                          <br />
                           Imagine things fully...
                         </p>
                       </div>
@@ -979,7 +985,8 @@ const OverviewPage: React.FC = () => {
                           className="text-sm font-bold "
                           style={{ color: "#545454" }}
                         >
-                          With your best effort, please identify obstacles for each stage as much as you can.
+                          With your best effort, please identify obstacles for
+                          each stage as much as you can.
                         </p>
                       </div>
                       {/* Q4: Obstacles */}
@@ -1275,18 +1282,17 @@ const OverviewPage: React.FC = () => {
                         </div>
                       </div>
 
-                      
                       {/* Transition text */}
                       <div className="flex flex-col">
                         <p
                           className="text-sm italic sm:mt-10 sm:mb-10"
                           style={{ color: "#545454" }}
                         >
-                          Now, <br /> take a moment and imagine your obstacles... <br />
+                          Now, <br /> take a moment and imagine your
+                          obstacles... <br />
                           Imagine things fully...
                         </p>
                       </div>
-
 
                       {/* Transition text */}
                       <div className="flex flex-col">
@@ -1294,7 +1300,8 @@ const OverviewPage: React.FC = () => {
                           className="text-sm font-bold sm:mt-5"
                           style={{ color: "#545454" }}
                         >
-                          With your best effort, please plan for each stage as much as you can.
+                          With your best effort, please plan for each stage as
+                          much as you can.
                         </p>
                       </div>
                       {/* Q5: Overcome Plans */}
@@ -1312,7 +1319,8 @@ const OverviewPage: React.FC = () => {
                               className="text-sm font-medium"
                               style={{ color: "#545454" }}
                             >
-                              Is there a different way you could select or avoid the situation?
+                              Is there a different way you could select or avoid
+                              the situation?
                             </h4>
                             {formData.overcomePlansObj.SituationPlan.map(
                               (plan, idx) => (
@@ -1558,14 +1566,12 @@ const OverviewPage: React.FC = () => {
                         </div>
                       </div>
 
-                       {/* Transition text */}
+                      {/* Transition text */}
                       <div className="flex flex-col">
                         <p
                           className="text-sm font-bold  sm:mb-10"
                           style={{ color: "#545454" }}
-                        >
-  
-                        </p>
+                        ></p>
                       </div>
                     </>
                   ) : (
@@ -1732,7 +1738,7 @@ const DayBox: React.FC<{
 
     {/* recording sessions: blue circles + completion times */}
     {sessions.length > 0 && (
-      <div className="mt-1 flex-1 flex flex-col gap-3 justify-center w-full">
+      <div className="mt-1 flex-1 flex flex-col gap-3 w-full overflow-y-auto max-h-[160px]">
         {sessions.map((session) => (
           <div
             key={session.sessionId}
