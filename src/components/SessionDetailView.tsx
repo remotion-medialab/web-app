@@ -59,13 +59,26 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   );
   const [savingAnswers, setSavingAnswers] = useState(false);
 
+  // Helper function to render text with bold formatting
+  const renderBoldText = (text: string) => {
+    const parts = text.split(/(\*\*.*?\*\*)/g);
+    return parts.map((part, index) => {
+      if (part.startsWith("**") && part.endsWith("**")) {
+        // Remove the ** markers and make it bold
+        const boldText = part.slice(2, -2);
+        return <strong key={index}>{boldText}</strong>;
+      }
+      return part;
+    });
+  };
+
   // Questions for user answers (in order from top to bottom)
   const userAnswerQuestions = [
-    "How could you have engaged/avoided differently?",
-    "How could you have impacted differently?",
-    "How could you have focused on different elements of the situation?",
-    "How could you have interpreted differently?",
-    "How could you have reacted differently?",
+    "How could you have **engaged/avoided** differently?",
+    "How could you have **impacted** differently?",
+    "How could you have **focused** on different elements of the situation?",
+    "How could you have **interpreted** differently?",
+    "How could you have **reacted** differently?",
   ];
 
   // Stop all audio on unmount
@@ -636,8 +649,10 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                     className="font-medium text-base"
                     style={{ color: "#545454" }}
                   >
-                    {userAnswerQuestions[recording.stepNumber] ||
-                      "How could you have acted differently?"}
+                    {renderBoldText(
+                      userAnswerQuestions[recording.stepNumber] ||
+                        "How could you have acted differently?"
+                    )}
                   </h4>
                 </div>
 
