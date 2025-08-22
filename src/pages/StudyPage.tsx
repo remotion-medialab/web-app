@@ -1,7 +1,7 @@
 // src/pages/OverviewPage.tsx
 
 import React, { useState, useEffect } from "react";
-import { addDays, format } from "date-fns";
+import { addDays, startOfWeek, format } from "date-fns";
 import { useAuth } from "../contexts/AuthContext";
 import { useRecordings } from "../hooks/useRecordings";
 import type { RecordingSession } from "../lib/recordingsService";
@@ -348,7 +348,7 @@ const OverviewPage: React.FC = () => {
   }, [userId, showPlan, selectedDayRange]);
 
   const today = new Date();
-  const weekStart = addDays(today, weekOffset * 7);
+  const weekStart = addDays(startOfWeek(addDays(today, weekOffset * 7)), 0);
 
   const weekDates = Array.from({ length: 7 }, (_, i) => addDays(weekStart, i));
 
@@ -490,28 +490,51 @@ const OverviewPage: React.FC = () => {
                   />
                 ))}
               </WeekPanel>
+            </div>
 
-              {/* Day range buttons */}
-              <div className="flex justify-center gap-4">
-                <PlanButton
-                  onClick={() => handlePlanButton("day0-5")}
-                  showPlan={showPlan && selectedDayRange === "day0-5"}
-                  planCreated={hasPlanForDayRange("day0-5")}
-                  dayRangeLabel="Day 0-5"
-                />
-                <PlanButton
-                  onClick={() => handlePlanButton("day6-10")}
-                  showPlan={showPlan && selectedDayRange === "day6-10"}
-                  planCreated={hasPlanForDayRange("day6-10")}
-                  dayRangeLabel="Day 6-10"
-                />
-                <PlanButton
-                  onClick={() => handlePlanButton("day11-15")}
-                  showPlan={showPlan && selectedDayRange === "day11-15"}
-                  planCreated={hasPlanForDayRange("day11-15")}
-                  dayRangeLabel="Day 11-15"
-                />
-              </div>
+            {/* Day range buttons in the middle */}
+            <div className="flex justify-center gap-4">
+              <PlanButton
+                onClick={() => handlePlanButton("day0-5")}
+                showPlan={showPlan && selectedDayRange === "day0-5"}
+                planCreated={hasPlanForDayRange("day0-5")}
+                dayRangeLabel="Day 0-5"
+              />
+              <PlanButton
+                onClick={() => handlePlanButton("day6-10")}
+                showPlan={showPlan && selectedDayRange === "day6-10"}
+                planCreated={hasPlanForDayRange("day6-10")}
+                dayRangeLabel="Day 6-10"
+              />
+              <PlanButton
+                onClick={() => handlePlanButton("day11-15")}
+                showPlan={showPlan && selectedDayRange === "day11-15"}
+                planCreated={hasPlanForDayRange("day11-15")}
+                dayRangeLabel="Day 11-15"
+              />
+            </div>
+
+            {/* BOTTOM WEEK ROW */}
+            <div className="space-y-4">
+              <WeekPanel>
+                {weekDates.map((date, idx) => (
+                  <DayBox
+                    key={idx + 7}
+                    date={addDays(date, 7)}
+                    sessions={getSessionsForDate(addDays(date, 7))}
+                    requiredSteps={condition === "A" ? 1 : 5}
+                    showPlan={showPlan || !!selectedSession}
+                    onSessionClick={(session) => {
+                      setSelectedSession(session);
+                      // Unselect behavior plan when a recording is clicked
+                      if (showPlan) {
+                        setShowPlan(false);
+                        setSelectedDayRange(null);
+                      }
+                    }}
+                  />
+                ))}
+              </WeekPanel>
             </div>
           </div>
         </div>

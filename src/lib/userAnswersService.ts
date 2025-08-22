@@ -37,12 +37,14 @@ export class UserAnswersService {
     question: string,
     answers: string[]
   ): Promise<UserAnswer> {
-    const answerId = `recording-${recordingId}`; // Changed to use recordingId
+    const answerId = recordingId; // Use recordingId directly
     const docPath = `${this.ROOT}/${userId}/sessions/${sessionId}/user_answers/${answerId}`;
 
     // Extract session number from sessionId for backward compatibility
     const sessionNumberMatch = sessionId.match(/(?:session|legacy-)(\d+)/);
-    const sessionNumber = sessionNumberMatch ? parseInt(sessionNumberMatch[1]) : 0;
+    const sessionNumber = sessionNumberMatch
+      ? parseInt(sessionNumberMatch[1])
+      : 0;
 
     const answerData: UserAnswer = {
       id: answerId,
@@ -66,7 +68,12 @@ export class UserAnswersService {
     const docRef = doc(db, docPath);
     await setDoc(docRef, docData);
 
-    console.log("✅ User answers saved:", docPath, "for recording:", recordingId);
+    console.log(
+      "✅ User answers saved:",
+      docPath,
+      "for recording:",
+      recordingId
+    );
     return answerData;
   }
 
@@ -78,7 +85,7 @@ export class UserAnswersService {
     sessionId: string,
     recordingId: string // Changed parameter
   ): Promise<UserAnswer | null> {
-    const answerId = `recording-${recordingId}`; // Changed to use recordingId
+    const answerId = recordingId; // Use recordingId directly
     const docPath = `${this.ROOT}/${userId}/sessions/${sessionId}/user_answers/${answerId}`;
 
     const docRef = doc(db, docPath);
@@ -179,9 +186,14 @@ export class UserAnswersService {
       );
     } else {
       // Create new answers array
-      return this.saveUserAnswers(userId, sessionId, recordingId, stepNumber, question, [
-        newAnswer,
-      ]);
+      return this.saveUserAnswers(
+        userId,
+        sessionId,
+        recordingId,
+        stepNumber,
+        question,
+        [newAnswer]
+      );
     }
   }
 
@@ -198,12 +210,19 @@ export class UserAnswersService {
     // Fetch answers for each recording
     for (const recordingId of recordingIds) {
       try {
-        const answer = await this.getUserAnswers(userId, sessionId, recordingId);
+        const answer = await this.getUserAnswers(
+          userId,
+          sessionId,
+          recordingId
+        );
         if (answer) {
           answersMap[recordingId] = answer;
         }
       } catch (error) {
-        console.error(`Error fetching answers for recording ${recordingId}:`, error);
+        console.error(
+          `Error fetching answers for recording ${recordingId}:`,
+          error
+        );
       }
     }
 

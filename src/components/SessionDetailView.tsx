@@ -55,6 +55,9 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   const [currentInputs, setCurrentInputs] = useState<Record<string, string>>(
     {}
   );
+  const [editingExistingAnswers, setEditingExistingAnswers] = useState<
+    Record<string, Record<number, string>>
+  >({});
   const [savingAnswers, setSavingAnswers] = useState(false);
 
   // Helper function to render text with bold formatting
@@ -143,6 +146,13 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
     loadUserAnswers();
   }, [userId, session.sessionId, session.recordings]);
 
+  // Clear all unsaved inputs when session changes
+  useEffect(() => {
+    setCurrentInputs({});
+    setNewAnswers({});
+    setEditingExistingAnswers({});
+  }, [session.sessionId]);
+
   // Load counterfactuals for all recordings in the session
   useEffect(() => {
     const loadAllCounterfactuals = async () => {
@@ -221,21 +231,22 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
     }));
   };
 
+  const handleEditExistingAnswer = (
+    recordingId: string,
+    answerIndex: number,
+    value: string
+  ) => {
+    setEditingExistingAnswers((prev) => ({
+      ...prev,
+      [recordingId]: {
+        ...(prev[recordingId] || {}),
+        [answerIndex]: value,
+      },
+    }));
+  };
+
   const handleSaveAllAnswers = async () => {
     if (!userId || !session.sessionId) return;
-
-    // Check if there are any changes to save (new answers or current inputs)
-    const hasNewAnswers = Object.values(newAnswers).some(
-      (answers) => answers.length > 0
-    );
-    const hasCurrentInputs = Object.values(currentInputs).some(
-      (input) => input.trim() !== ""
-    );
-
-    if (!hasNewAnswers && !hasCurrentInputs) {
-      toast.error("No changes to save");
-      return;
-    }
 
     setSavingAnswers(true);
     try {
@@ -311,9 +322,76 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
         }));
       }
 
-      // Clear all new answers and current inputs
+      // Then, save any edited existing answers
+      for (const [recordingId, edits] of Object.entries(
+        editingExistingAnswers
+      )) {
+        if (Object.keys(edits).length === 0) continue;
+
+        const question =
+          userAnswerQuestions[
+            session.recordings.find((r) => r.id === recordingId)?.stepNumber ??
+              0
+          ];
+
+        // Get existing answers for this recording
+        const existingAnswers = userAnswers[recordingId]?.answers || [];
+
+        // Create updated answers array with edited values
+        const updatedAnswers = existingAnswers.map((answer, index) => {
+          return edits[index] !== undefined ? edits[index] : answer;
+        });
+
+        // Save updated answers for this recording
+        const recording = session.recordings.find((r) => r.id === recordingId);
+        const stepNumber = recording?.stepNumber ?? 0;
+
+        const savedAnswer = await UserAnswersService.saveUserAnswers(
+          userId,
+          session.sessionId,
+          recordingId,
+          stepNumber,
+          question,
+          updatedAnswers
+        );
+
+        setUserAnswers((prev) => ({
+          ...prev,
+          [recordingId]: savedAnswer,
+        }));
+      }
+
+      // Finally, save all existing answers that haven't been modified (to ensure everything is saved)
+      for (const recording of session.recordings) {
+        const existingAnswers = userAnswers[recording.id]?.answers || [];
+        if (existingAnswers.length > 0) {
+          const question =
+            userAnswerQuestions[recording.stepNumber] ||
+            "How could you have acted differently?";
+
+          // Only save if we haven't already saved this recording in the previous steps
+          const hasBeenSaved =
+            newAnswers[recording.id]?.length > 0 ||
+            currentInputs[recording.id]?.trim() ||
+            editingExistingAnswers[recording.id];
+
+          if (!hasBeenSaved) {
+            await UserAnswersService.saveUserAnswers(
+              userId,
+              session.sessionId,
+              recording.id,
+              recording.stepNumber,
+              question,
+              existingAnswers
+            );
+          }
+        }
+      }
+
+      // Clear all new answers, current inputs, and editing state
       setNewAnswers({});
       setCurrentInputs({});
+      setEditingExistingAnswers({});
 
       toast.success("All answers saved successfully!");
     } catch (error) {
@@ -406,6 +484,25 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
             </div>
           )}
         </div>
+        <button
+          onClick={onClose}
+          className="text-gray-400 hover:text-gray-600 p-1 rounded-full hover:bg-gray-100 transition-colors"
+          title="Close transcript view"
+        >
+          <svg
+            className="w-6 h-6"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M6 18L18 6M6 6l12 12"
+            />
+          </svg>
+        </button>
       </div>
 
       {/* Transcription Progress Bar */}
@@ -450,11 +547,44 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
           .map((recording) => (
             <div
               key={recording.id}
-              className={`space-y-3 transition-colors ${
+              className={`space-y-3 transition-colors cursor-pointer ${
                 selectedRecording?.id === recording.id
                   ? "bg-blue-100 border-2 border-blue-300"
                   : "hover:bg-blue-50"
               }`}
+              onClick={() => {
+                // Clear unsaved inputs for all recordings except the one being clicked
+                setCurrentInputs((prev) => {
+                  const newInputs: Record<string, string> = {};
+                  // Only keep the input for the recording being clicked
+                  if (prev[recording.id]) {
+                    newInputs[recording.id] = prev[recording.id];
+                  }
+                  return newInputs;
+                });
+
+                setNewAnswers((prev) => {
+                  const newAnswers: Record<string, string[]> = {};
+                  // Only keep the new answers for the recording being clicked
+                  if (prev[recording.id]) {
+                    newAnswers[recording.id] = prev[recording.id];
+                  }
+                  return newAnswers;
+                });
+
+                setEditingExistingAnswers((prev) => {
+                  const newEditing: Record<string, Record<number, string>> = {};
+                  // Only keep the editing state for the recording being clicked
+                  if (prev[recording.id]) {
+                    newEditing[recording.id] = prev[recording.id];
+                  }
+                  return newEditing;
+                });
+
+                onRecordingSelect?.(recording);
+                onQuestionSelect?.(recording.stepNumber);
+              }}
+              title="Click to view mental model"
             >
               {/* Question with blue circle */}
               <div className="flex items-start gap-3">
@@ -470,13 +600,8 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
 
               {/* Transcription with rounded border and play button */}
               <div
-                className="bg-white border border-gray-200 rounded-2xl p-4 text-sm relative ml-9 cursor-pointer"
+                className="bg-white border border-gray-200 rounded-2xl p-4 text-sm relative ml-9"
                 style={{ color: "#666666" }}
-                onClick={() => {
-                  onRecordingSelect?.(recording);
-                  onQuestionSelect?.(recording.stepNumber);
-                }}
-                title="Click to view mental model"
               >
                 {recording.transcription?.text ? (
                   <>
@@ -642,7 +767,6 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
               <div className="ml-9 space-y-3">
                 {/* User Answer Question */}
                 <div className="flex items-start gap-3">
-                  <div className="w-6 h-6 rounded-full bg-green-500 flex-shrink-0 mt-1"></div>
                   <h4
                     className="font-medium text-base"
                     style={{ color: "#545454" }}
@@ -658,49 +782,70 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                 {userAnswers[recording.id]?.answers && (
                   <div className="space-y-2">
                     {userAnswers[recording.id].answers.map((answer, index) => (
-                      <div
+                      <textarea
                         key={index}
-                        className="bg-green-50 border border-green-200 rounded-lg p-3 text-sm"
-                        style={{ color: "#666666" }}
-                      >
-                        <p className="whitespace-pre-wrap leading-relaxed">
-                          {answer}
-                        </p>
-                      </div>
+                        className="w-full border rounded p-2 text-sm bg-white resize-none"
+                        rows={3}
+                        value={
+                          editingExistingAnswers[recording.id]?.[index] !==
+                          undefined
+                            ? editingExistingAnswers[recording.id][index]
+                            : answer
+                        }
+                        onChange={(e) =>
+                          handleEditExistingAnswer(
+                            recording.id,
+                            index,
+                            e.target.value
+                          )
+                        }
+                        style={{
+                          borderColor: "#d4d4d4",
+                          color: "#545454",
+                        }}
+                      />
                     ))}
                   </div>
                 )}
 
                 {/* New Answers (not yet saved) */}
                 {newAnswers[recording.id]?.map((answer, index) => (
-                  <div
+                  <textarea
                     key={`new-${index}`}
-                    className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-sm"
-                    style={{ color: "#666666" }}
-                  >
-                    <p className="whitespace-pre-wrap leading-relaxed">
-                      {answer}
-                    </p>
-                    <p className="text-xs text-blue-500 mt-1">
-                      (Not saved yet)
-                    </p>
-                  </div>
+                    className="w-full border rounded p-2 text-sm bg-white resize-none"
+                    rows={3}
+                    value={answer}
+                    onChange={(e) => {
+                      // Update the specific new answer in the array
+                      setNewAnswers((prev) => ({
+                        ...prev,
+                        [recording.id]:
+                          prev[recording.id]?.map((a, i) =>
+                            i === index ? e.target.value : a
+                          ) || [],
+                      }));
+                    }}
+                    style={{
+                      borderColor: "#d4d4d4",
+                      color: "#545454",
+                    }}
+                  />
                 ))}
 
                 {/* Add New Answer Section - Following behavior plan style */}
                 <div className="space-y-2">
                   <div className="flex gap-2 items-start">
                     <textarea
-                      className="flex-1 border rounded p-2 text-sm bg-green-50 resize-none"
+                      className="flex-1 border rounded p-2 text-sm bg-white resize-none"
                       rows={3}
                       placeholder="Enter your answer..."
                       value={currentInputs[recording.id] || ""}
-                      onChange={(e) =>
+                      onChange={(e) => {
                         setCurrentInputs((prev) => ({
                           ...prev,
                           [recording.id]: e.target.value,
-                        }))
-                      }
+                        }));
+                      }}
                       style={{
                         borderColor: "#d4d4d4",
                         color: "#545454",
@@ -722,42 +867,39 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
       </div>
 
       {/* Save All Answers Button */}
-      {(Object.values(newAnswers).some((answers) => answers.length > 0) ||
-        Object.values(currentInputs).some((input) => input.trim() !== "")) && (
-        <div className="mt-6 pt-4 border-t border-gray-200">
-          <div className="flex justify-center">
-            <button
-              onClick={handleSaveAllAnswers}
-              disabled={savingAnswers}
-              className="px-6 py-3 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
-            >
-              {savingAnswers ? (
-                <>
-                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                  Saving All Answers...
-                </>
-              ) : (
-                <>
-                  <svg
-                    className="w-4 h-4"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M5 13l4 4L19 7"
-                    />
-                  </svg>
-                  Save All Answers
-                </>
-              )}
-            </button>
-          </div>
+      <div className="mt-6 pt-4 border-t border-gray-200">
+        <div className="flex justify-center">
+          <button
+            onClick={handleSaveAllAnswers}
+            disabled={savingAnswers}
+            className="px-6 py-3 bg-blue-500 text-white text-sm rounded-lg hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+          >
+            {savingAnswers ? (
+              <>
+                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                Saving All Answers...
+              </>
+            ) : (
+              <>
+                <svg
+                  className="w-4 h-4"
+                  fill="none"
+                  stroke="currentColor"
+                  viewBox="0 0 24 24"
+                >
+                  <path
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    strokeWidth={2}
+                    d="M5 13l4 4L19 7"
+                  />
+                </svg>
+                Save All Answers
+              </>
+            )}
+          </button>
         </div>
-      )}
+      </div>
 
       {/* Footer info */}
       <div className="mt-6 pt-4 border-t border-gray-200">
