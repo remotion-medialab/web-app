@@ -1489,7 +1489,6 @@ const OverviewPage: React.FC = () => {
                 }}
                 onRecordingSelect={setSelectedRecording}
                 showMentalModel={showMentalModel}
-                onToggleMentalModel={() => setShowMentalModel(!showMentalModel)}
                 selectedQuestionIndex={selectedQuestionIndex}
                 onQuestionSelect={setSelectedQuestionIndex}
               />

@@ -15,6 +15,7 @@ export interface UserAnswer {
   userId: string;
   recordingId: string; // Changed from sessionNumber to recordingId
   sessionId: string; // Keep sessionId for reference
+  sessionNumber: number; // Add sessionNumber for backward compatibility
   stepNumber: number;
   question: string;
   answers: string[];
