@@ -20,7 +20,6 @@ interface SessionDetailViewProps {
   onClose: () => void;
   onRecordingSelect?: (recording: Recording) => void;
   showMentalModel?: boolean;
-  onToggleMentalModel?: () => void;
   selectedQuestionIndex?: number;
   onQuestionSelect?: (index: number) => void;
 }
@@ -31,7 +30,6 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   onClose,
   onRecordingSelect,
   showMentalModel,
-  onToggleMentalModel,
   selectedQuestionIndex,
   onQuestionSelect,
 }) => {
