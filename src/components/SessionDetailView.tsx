@@ -30,7 +30,6 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   onClose,
   onRecordingSelect,
   showMentalModel,
-  onToggleMentalModel: _onToggleMentalModel,
   selectedQuestionIndex,
   onQuestionSelect,
 }) => {
