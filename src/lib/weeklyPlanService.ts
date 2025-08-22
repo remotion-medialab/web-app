@@ -32,18 +32,34 @@ export class WeeklyPlanService {
   }
 
   /**
-   * Create or update a weekly plan
+   * Get the date range string for display
+   */
+  static getWeekDisplayRange(date: Date = new Date()): string {
+    const { weekStart, weekEnd } = this.getWeekBounds(date);
+    return `${format(weekStart, "MMM d")} - ${format(weekEnd, "MMM d, yyyy")}`;
+  }
+
+  /**
+   * Create or update a behavior plan (overloaded for backward compatibility)
    */
   static async saveWeeklyPlan(
     userId: string,
     formData: WeeklyPlanFormData,
-    targetDate: Date = new Date()
+    targetDateOrDayRange: Date | string
   ): Promise<WeeklyPlan> {
-    const { weekStartDate, weekEndDate } = this.getWeekBounds(targetDate);
-    const planId = `${userId}_${weekStartDate}`;
+    let planId: string;
+    let existingPlan: WeeklyPlan | null;
 
-    // Check if plan already exists
-    const existingPlan = await this.getWeeklyPlan(userId, targetDate);
+    if (targetDateOrDayRange instanceof Date) {
+      // Backward compatibility: handle Date parameter
+      const { weekStartDate } = this.getWeekBounds(targetDateOrDayRange);
+      planId = `${userId}_${weekStartDate}`;
+      existingPlan = await this.getWeeklyPlan(userId, targetDateOrDayRange);
+    } else {
+      // New functionality: handle day range string
+      planId = `${userId}_${targetDateOrDayRange}`;
+      existingPlan = await this.getWeeklyPlan(userId, targetDateOrDayRange);
+    }
 
     // Transform formData to match the responses structure
     const responses = {
@@ -68,8 +84,14 @@ export class WeeklyPlanService {
     const planData: WeeklyPlan = {
       id: planId,
       userId,
-      weekStartDate,
-      weekEndDate,
+      weekStartDate:
+        targetDateOrDayRange instanceof Date
+          ? this.getWeekBounds(targetDateOrDayRange).weekStartDate
+          : targetDateOrDayRange,
+      weekEndDate:
+        targetDateOrDayRange instanceof Date
+          ? this.getWeekBounds(targetDateOrDayRange).weekEndDate
+          : targetDateOrDayRange,
       createdAt: existingPlan?.createdAt || new Date(),
       updatedAt: new Date(),
       responses,
@@ -91,14 +113,22 @@ export class WeeklyPlanService {
   }
 
   /**
-   * Get weekly plan for a specific week
+   * Get behavior plan for a specific day range or date (overloaded for backward compatibility)
    */
   static async getWeeklyPlan(
     userId: string,
-    targetDate: Date = new Date()
+    targetDateOrDayRange: Date | string
   ): Promise<WeeklyPlan | null> {
-    const { weekStartDate } = this.getWeekBounds(targetDate);
-    const planId = `${userId}_${weekStartDate}`;
+    let planId: string;
+
+    if (targetDateOrDayRange instanceof Date) {
+      // Backward compatibility: handle Date parameter
+      const { weekStartDate } = this.getWeekBounds(targetDateOrDayRange);
+      planId = `${userId}_${weekStartDate}`;
+    } else {
+      // New functionality: handle day range string
+      planId = `${userId}_${targetDateOrDayRange}`;
+    }
 
     const docRef = doc(db, this.ROOT, userId, "weeklyPlans", planId);
     const docSnap = await getDoc(docRef);
@@ -136,7 +166,18 @@ export class WeeklyPlanService {
   }
 
   /**
-   * Check if user has a plan for the current week
+   * Check if user has a plan for a specific day range
+   */
+  static async hasDayRangePlan(
+    userId: string,
+    dayRange: string
+  ): Promise<boolean> {
+    const plan = await this.getWeeklyPlan(userId, dayRange);
+    return plan !== null && plan.isCompleted;
+  }
+
+  /**
+   * Check if user has a plan for the current week (backward compatibility)
    */
   static async hasCurrentWeekPlan(userId: string): Promise<boolean> {
     const plan = await this.getWeeklyPlan(userId, new Date());
@@ -144,7 +185,7 @@ export class WeeklyPlanService {
   }
 
   /**
-   * Associate recording sessions with a weekly plan
+   * Associate recording sessions with a weekly plan (backward compatibility)
    */
   static async associateSessionsWithPlan(
     userId: string,
@@ -167,19 +208,12 @@ export class WeeklyPlanService {
     await setDoc(
       docRef,
       {
-        ...existingPlan,
         associatedSessionIds: updatedAssociatedSessions,
         updatedAt: Timestamp.fromDate(new Date()),
       },
       { merge: true }
     );
-  }
 
-  /**
-   * Get the date range string for display
-   */
-  static getWeekDisplayRange(date: Date = new Date()): string {
-    const { weekStart, weekEnd } = this.getWeekBounds(date);
-    return `${format(weekStart, "MMM d")} - ${format(weekEnd, "MMM d, yyyy")}`;
+    console.log("✅ Associated sessions with weekly plan:", planId);
   }
 }
