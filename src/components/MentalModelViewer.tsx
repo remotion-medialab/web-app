@@ -1492,11 +1492,11 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
               )} selected`}
           </p>
         )}
-        {weeklyPlan && (
+        {/* {weeklyPlan && (
           <p className="text-xs" style={{ color: "#059669" }}>
             📋 Weekly plan context available • Enhanced counterfactuals enabled
           </p>
-        )}
+        )} */}
       </div>
     </div>
   );

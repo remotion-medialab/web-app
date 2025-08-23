@@ -817,13 +817,13 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
               )}
 
               {/* Activity summary if available */}
-              {recording.activitySummary && (
+              {/* {recording.activitySummary && (
                 <p className="text-xs ml-9" style={{ color: "#b0b0b0" }}>
                   Activity: {recording.activitySummary.primaryActivity}(
                   {(recording.activitySummary.confidence * 100).toFixed(0)}%
                   confidence)
                 </p>
-              )}
+              )} */}
 
               {/* User Answer Section */}
               <div className="ml-9 space-y-3">
