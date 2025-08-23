@@ -2,10 +2,7 @@ import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { CounterfactualService } from "../lib/counterfactualService";
 import type { Recording } from "../lib/recordingsService";
-import {
-  RECORDING_QUESTIONS,
-  getQuestionForStep,
-} from "../constants/recordingQuestions";
+import { getQuestionForStep } from "../constants/recordingQuestions";
 import { CounterfactualFirebaseService } from "../lib/counterfactualFirebaseService";
 import { useAuth } from "../contexts/AuthContext";
 
