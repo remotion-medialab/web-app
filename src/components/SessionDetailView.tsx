@@ -90,6 +90,35 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
       return "What could you have done differently?";
     }
 
+    // Determine the group based on the min and max stepNumber values in the session
+    const stepNumbers = session.recordings.map((r) => r.stepNumber);
+    const minStepNumber = Math.min(...stepNumbers);
+    const maxStepNumber = Math.max(...stepNumbers);
+
+    console.log(
+      `📊 Session stepNumber range: [${minStepNumber}, ${maxStepNumber}]`
+    );
+
+    // Determine which group this session belongs to
+    let adjustedStepNumber = stepNumber;
+    if (minStepNumber === 0 && maxStepNumber === 4) {
+      // Group 1: [0, 4] - use stepNumber as is
+      console.log(
+        `✅ Group 1 detected [0, 4], using stepNumber: ${stepNumber}`
+      );
+    } else if (minStepNumber === 1 && maxStepNumber === 5) {
+      // Group 2: [1, 5] - use stepNumber - 1
+      adjustedStepNumber = stepNumber - 1;
+      console.log(
+        `✅ Group 2 detected [1, 5], using adjusted stepNumber: ${adjustedStepNumber} (original: ${stepNumber})`
+      );
+    } else {
+      // Fallback: use stepNumber as is
+      console.log(
+        `⚠️ Unknown group pattern, using stepNumber as is: ${stepNumber}`
+      );
+    }
+
     // Default questions for all other cases
     const defaultQuestions = [
       "How could you have **engaged/avoided** differently?",
@@ -100,9 +129,10 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
     ];
 
     const question =
-      defaultQuestions[stepNumber] || "How could you have acted differently?";
+      defaultQuestions[adjustedStepNumber] ||
+      "How could you have acted differently?";
     console.log(
-      `📝 Using default question for step ${stepNumber}: "${question}"`
+      `📝 Using default question for adjusted step ${adjustedStepNumber}: "${question}"`
     );
     return question;
   };
