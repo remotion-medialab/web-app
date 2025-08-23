@@ -869,7 +869,7 @@ const OverviewPage: React.FC = () => {
                           className="text-sm font-medium mb-1"
                           style={{ color: "#545454" }}
                         >
-                          Q4. {promptsConditionBC.q4}
+                          Q3. {promptsConditionBC.q4}
                         </label>
                         <div className="space-y-4">
                           {/* Situation Obstacles */}
@@ -1184,7 +1184,7 @@ const OverviewPage: React.FC = () => {
                           className="text-sm font-medium mb-3"
                           style={{ color: "#545454" }}
                         >
-                          Q5. {promptsConditionBC.q5}
+                          Q4. {promptsConditionBC.q5}
                         </label>
                         <div className="space-y-4">
                           {/* Situation Plans */}
