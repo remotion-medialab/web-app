@@ -275,6 +275,9 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
 
     setSavingAnswers(true);
     try {
+      // Collect all the answers to save and update state at the end
+      const updatedUserAnswers: Record<string, UserAnswer> = { ...userAnswers };
+
       // First, save all new answers for each recording
       for (const [recordingId, answers] of Object.entries(newAnswers)) {
         const validAnswers = answers.filter((answer) => answer.trim() !== "");
@@ -304,10 +307,8 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
           allAnswers
         );
 
-        setUserAnswers((prev) => ({
-          ...prev,
-          [recordingId]: savedAnswer,
-        }));
+        // Store the saved answer for batch update
+        updatedUserAnswers[recordingId] = savedAnswer;
       }
 
       // Then, save any current inputs that have content
@@ -318,8 +319,11 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
           session.recordings.find((r) => r.id === recordingId)?.stepNumber ?? 0;
         const question = getUserAnswerQuestion(questionStepNumber);
 
-        // Get existing answers for this recording
-        const existingAnswers = userAnswers[recordingId]?.answers || [];
+        // Get existing answers for this recording (use updated answers if available)
+        const existingAnswers =
+          updatedUserAnswers[recordingId]?.answers ||
+          userAnswers[recordingId]?.answers ||
+          [];
 
         // Add the current input to existing answers
         const allAnswers = [...existingAnswers, input.trim()];
@@ -337,10 +341,8 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
           allAnswers
         );
 
-        setUserAnswers((prev) => ({
-          ...prev,
-          [recordingId]: savedAnswer,
-        }));
+        // Store the saved answer for batch update
+        updatedUserAnswers[recordingId] = savedAnswer;
       }
 
       // Then, save any edited existing answers
@@ -353,8 +355,11 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
           session.recordings.find((r) => r.id === recordingId)?.stepNumber ?? 0;
         const question = getUserAnswerQuestion(questionStepNumber);
 
-        // Get existing answers for this recording
-        const existingAnswers = userAnswers[recordingId]?.answers || [];
+        // Get existing answers for this recording (use updated answers if available)
+        const existingAnswers =
+          updatedUserAnswers[recordingId]?.answers ||
+          userAnswers[recordingId]?.answers ||
+          [];
 
         // Create updated answers array with edited values
         const updatedAnswers = existingAnswers.map((answer, index) => {
@@ -374,10 +379,8 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
           updatedAnswers
         );
 
-        setUserAnswers((prev) => ({
-          ...prev,
-          [recordingId]: savedAnswer,
-        }));
+        // Store the saved answer for batch update
+        updatedUserAnswers[recordingId] = savedAnswer;
       }
 
       // Finally, save all existing answers that haven't been modified (to ensure everything is saved)
@@ -404,6 +407,9 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
           }
         }
       }
+
+      // Update state once with all the changes
+      setUserAnswers(updatedUserAnswers);
 
       // Clear all new answers, current inputs, and editing state
       setNewAnswers({});
