@@ -34,6 +34,9 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
   onQuestionSelect,
 }) => {
   const { userId, condition } = useAuth();
+  console.log(
+    `🎯 SessionDetailView - condition: ${condition}, userId: ${userId}`
+  );
   const [recordingCounterfactuals, setRecordingCounterfactuals] = useState<
     Record<string, CounterfactualData>
   >({});
@@ -73,14 +76,36 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
     });
   };
 
-  // Questions for user answers (in order from top to bottom)
-  const userAnswerQuestions = [
-    "How could you have **engaged/avoided** differently?",
-    "How could you have **impacted** differently?",
-    "How could you have **focused** on different elements of the situation?",
-    "How could you have **interpreted** differently?",
-    "How could you have **reacted** differently?",
-  ];
+  // Function to get user answer question based on condition and step
+  const getUserAnswerQuestion = (stepNumber: number): string => {
+    console.log(
+      `🤔 getUserAnswerQuestion called with stepNumber: ${stepNumber}, condition: ${condition}`
+    );
+
+    // For condition A, step 0, use different question
+    if (condition === "A" && stepNumber === 0) {
+      console.log(
+        `✅ Condition A detected for step 0, returning "What could you have done differently?"`
+      );
+      return "What could you have done differently?";
+    }
+
+    // Default questions for all other cases
+    const defaultQuestions = [
+      "How could you have **engaged/avoided** differently?",
+      "How could you have **impacted** differently?",
+      "How could you have **focused** on different elements of the situation?",
+      "How could you have **interpreted** differently?",
+      "How could you have **reacted** differently?",
+    ];
+
+    const question =
+      defaultQuestions[stepNumber] || "How could you have acted differently?";
+    console.log(
+      `📝 Using default question for step ${stepNumber}: "${question}"`
+    );
+    return question;
+  };
 
   // Stop all audio on unmount
   useEffect(() => {
@@ -256,11 +281,9 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
 
         if (validAnswers.length === 0) continue;
 
-        const question =
-          userAnswerQuestions[
-            session.recordings.find((r) => r.id === recordingId)?.stepNumber ??
-              0
-          ];
+        const questionStepNumber =
+          session.recordings.find((r) => r.id === recordingId)?.stepNumber ?? 0;
+        const question = getUserAnswerQuestion(questionStepNumber);
 
         // Get existing answers for this recording
         const existingAnswers = userAnswers[recordingId]?.answers || [];
@@ -291,11 +314,9 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
       for (const [recordingId, input] of Object.entries(currentInputs)) {
         if (!input.trim()) continue;
 
-        const question =
-          userAnswerQuestions[
-            session.recordings.find((r) => r.id === recordingId)?.stepNumber ??
-              0
-          ];
+        const questionStepNumber =
+          session.recordings.find((r) => r.id === recordingId)?.stepNumber ?? 0;
+        const question = getUserAnswerQuestion(questionStepNumber);
 
         // Get existing answers for this recording
         const existingAnswers = userAnswers[recordingId]?.answers || [];
@@ -328,11 +349,9 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
       )) {
         if (Object.keys(edits).length === 0) continue;
 
-        const question =
-          userAnswerQuestions[
-            session.recordings.find((r) => r.id === recordingId)?.stepNumber ??
-              0
-          ];
+        const questionStepNumber =
+          session.recordings.find((r) => r.id === recordingId)?.stepNumber ?? 0;
+        const question = getUserAnswerQuestion(questionStepNumber);
 
         // Get existing answers for this recording
         const existingAnswers = userAnswers[recordingId]?.answers || [];
@@ -365,9 +384,7 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
       for (const recording of session.recordings) {
         const existingAnswers = userAnswers[recording.id]?.answers || [];
         if (existingAnswers.length > 0) {
-          const question =
-            userAnswerQuestions[recording.stepNumber] ||
-            "How could you have acted differently?";
+          const question = getUserAnswerQuestion(recording.stepNumber);
 
           // Only save if we haven't already saved this recording in the previous steps
           const hasBeenSaved =
@@ -410,10 +427,9 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
     if (!currentInput || !currentInput.trim()) return;
 
     try {
-      const question =
-        userAnswerQuestions[
-          session.recordings.find((r) => r.id === recordingId)?.stepNumber ?? 0
-        ];
+      const questionStepNumber =
+        session.recordings.find((r) => r.id === recordingId)?.stepNumber ?? 0;
+      const question = getUserAnswerQuestion(questionStepNumber);
 
       // Get existing answers for this recording
       const existingAnswers = userAnswers[recordingId]?.answers || [];
@@ -655,8 +671,21 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                   className="font-medium text-base"
                   style={{ color: "#545454" }}
                 >
-                  {recording.question ||
-                    getQuestionForStep(recording.stepNumber)}
+                  {(() => {
+                    console.log(
+                      `🔍 Recording ${recording.id} - stepNumber: ${recording.stepNumber}, recording.question: "${recording.question}", condition: ${condition}`
+                    );
+                    // For condition A, always use the condition-based question for step 0
+                    const questionText =
+                      condition === "A" && recording.stepNumber === 0
+                        ? getQuestionForStep(recording.stepNumber, condition)
+                        : recording.question ||
+                          getQuestionForStep(recording.stepNumber, condition);
+                    console.log(
+                      `📝 Displaying question for step ${recording.stepNumber}: "${questionText}"`
+                    );
+                    return questionText;
+                  })()}
                 </h3>
               </div>
 
@@ -834,8 +863,7 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                     style={{ color: "#545454" }}
                   >
                     {renderBoldText(
-                      userAnswerQuestions[recording.stepNumber] ||
-                        "How could you have acted differently?"
+                      getUserAnswerQuestion(recording.stepNumber)
                     )}
                   </h4>
                 </div>

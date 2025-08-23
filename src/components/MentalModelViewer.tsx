@@ -1,7 +1,10 @@
 import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import type { RecordingSession, Recording } from "../lib/recordingsService";
-import { RECORDING_QUESTIONS } from "../constants/recordingQuestions";
+import {
+  RECORDING_QUESTIONS,
+  getQuestionForStep,
+} from "../constants/recordingQuestions";
 import { CounterfactualFirebaseService } from "../lib/counterfactualFirebaseService";
 import { useAuth } from "../contexts/AuthContext";
 import { WeeklyPlanService } from "../lib/weeklyPlanService";
@@ -139,6 +142,9 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
   onRecordingSelect,
 }) => {
   const { userId, condition } = useAuth();
+  console.log(
+    `🧠 MentalModelViewer - condition: ${condition}, userId: ${userId}`
+  );
   const [isGenerating, setIsGenerating] = useState(false);
   const [counterfactuals, setCounterfactuals] = useState<string[]>([]);
   const [showCounterfactuals, setShowCounterfactuals] = useState(false);
@@ -539,7 +545,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
           userId: userId,
           questions: questionResponses.map((response, index) => ({
             stepNumber: index,
-            question: RECORDING_QUESTIONS[index],
+            question: getQuestionForStep(index, condition),
             transcription: response,
             recordingId: session.recordings.find((r) => r.stepNumber === index)
               ?.id,
@@ -902,7 +908,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
             questions: [
               {
                 stepNumber: questionIndex,
-                question: RECORDING_QUESTIONS[questionIndex],
+                question: getQuestionForStep(questionIndex, condition),
                 transcription: transcription,
                 recordingId: recording?.id,
               },
@@ -1136,9 +1142,10 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
 
   const getNodeTitle = (node: Node): string => {
     if (node.type === "indicator") {
-      return `💡 Click to view generated alternatives for:\n${
-        RECORDING_QUESTIONS[node.questionIndex || 0]
-      }`;
+      return `💡 Click to view generated alternatives for:\n${getQuestionForStep(
+        node.questionIndex || 0,
+        condition
+      )}`;
     }
 
     if (node.isCounterfactual) {
@@ -1170,7 +1177,7 @@ const MentalModelViewer: React.FC<MentalModelViewerProps> = ({
     }
 
     if (node.questionIndex !== undefined) {
-      const question = RECORDING_QUESTIONS[node.questionIndex];
+      const question = getQuestionForStep(node.questionIndex, condition);
       const recording = session.recordings.find(
         (r) => r.stepNumber === node.questionIndex
       );

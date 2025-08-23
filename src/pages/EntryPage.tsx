@@ -2,6 +2,7 @@
 
 import React from "react";
 import { useLocation } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 
 const useQuery = () => {
   return new URLSearchParams(useLocation().search);
@@ -11,6 +12,8 @@ const EntryPage: React.FC = () => {
   const query = useQuery();
   const date = query.get("date");
   const time = query.get("time");
+  const { condition } = useAuth();
+  console.log(`📄 EntryPage - condition: ${condition}`);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 flex">
@@ -34,7 +37,9 @@ const EntryPage: React.FC = () => {
 
         <div className="flex-1 space-y-4 overflow-y-auto">
           {[
-            "What is the situation you engaged in or avoided?",
+            condition === "A"
+              ? "Please describe in detail, without naming anyone: what happened, who was involved, when and where it took place, how you felt, and what you tried?"
+              : "What is the situation you engaged in or avoided?",
             "Did you do anything to impact how the situation unfolded, if any?",
             "Can you remember what caught your attention or focused on the situation?",
             "How did you interpret the situation at the time?",

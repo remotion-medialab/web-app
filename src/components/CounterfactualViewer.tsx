@@ -2,7 +2,10 @@ import React, { useState, useEffect } from "react";
 import toast from "react-hot-toast";
 import { CounterfactualService } from "../lib/counterfactualService";
 import type { Recording } from "../lib/recordingsService";
-import { RECORDING_QUESTIONS } from "../constants/recordingQuestions";
+import {
+  RECORDING_QUESTIONS,
+  getQuestionForStep,
+} from "../constants/recordingQuestions";
 import { CounterfactualFirebaseService } from "../lib/counterfactualFirebaseService";
 import { useAuth } from "../contexts/AuthContext";
 
@@ -94,6 +97,7 @@ export const CounterfactualViewer: React.FC<CounterfactualViewerProps> = ({
   onCounterfactualSelected,
 }) => {
   const { condition } = useAuth();
+  console.log(`🎲 CounterfactualViewer - condition: ${condition}`);
   const [stepData, setStepData] = useState<StepCounterfactuals[]>([]);
   const [activeStep, setActiveStep] = useState<number>(0);
   const [serviceAvailable, setServiceAvailable] = useState<boolean>(true);
@@ -108,7 +112,7 @@ export const CounterfactualViewer: React.FC<CounterfactualViewerProps> = ({
     // Initialize step data
     const initialData = Array.from({ length: 5 }, (_, index) => ({
       stepNumber: index,
-      question: RECORDING_QUESTIONS[index],
+      question: getQuestionForStep(index, condition),
       originalText: recordings[index]?.transcription?.text || "",
       counterfactuals: [],
       selectedCounterfactual: undefined,

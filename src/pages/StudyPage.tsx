@@ -1565,9 +1565,7 @@ const PlanButton: React.FC<{
       alt="icon"
       className="w-4 h-4 mr-2"
     />
-    {planCreated
-      ? `Review behavior plan ${dayRangeLabel ? `(${dayRangeLabel})` : ""}`
-      : `Create behavior plan ${dayRangeLabel ? `(${dayRangeLabel})` : ""}`}
+    {`Behavior plan ${dayRangeLabel ? `(${dayRangeLabel})` : ""}`}
   </button>
 );
 
