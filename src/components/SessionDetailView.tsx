@@ -402,6 +402,60 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
     }
   };
 
+  // Function to save current input for a specific recording before navigating
+  const saveCurrentInputForRecording = async (recordingId: string) => {
+    if (!userId || !session.sessionId) return;
+
+    const currentInput = currentInputs[recordingId];
+    if (!currentInput || !currentInput.trim()) return;
+
+    try {
+      const question =
+        userAnswerQuestions[
+          session.recordings.find((r) => r.id === recordingId)?.stepNumber ?? 0
+        ];
+
+      // Get existing answers for this recording
+      const existingAnswers = userAnswers[recordingId]?.answers || [];
+
+      // Add the current input to existing answers
+      const allAnswers = [...existingAnswers, currentInput.trim()];
+
+      // Save all answers for this recording
+      const recording = session.recordings.find((r) => r.id === recordingId);
+      const stepNumber = recording?.stepNumber ?? 0;
+
+      const savedAnswer = await UserAnswersService.saveUserAnswers(
+        userId,
+        session.sessionId,
+        recordingId,
+        stepNumber,
+        question,
+        allAnswers
+      );
+
+      setUserAnswers((prev) => ({
+        ...prev,
+        [recordingId]: savedAnswer,
+      }));
+
+      // Clear the current input for this recording
+      setCurrentInputs((prev) => ({
+        ...prev,
+        [recordingId]: "",
+      }));
+
+      console.log("✅ Auto-saved input for recording:", recordingId);
+    } catch (error) {
+      console.error(
+        "Error auto-saving input for recording:",
+        recordingId,
+        error
+      );
+      // Don't show toast error for auto-save to avoid interrupting user flow
+    }
+  };
+
   const handlePlayToggle = (
     e: React.MouseEvent,
     recordingId: string,
@@ -552,7 +606,15 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                   ? "bg-blue-100 border-2 border-blue-300"
                   : "hover:bg-blue-50"
               }`}
-              onClick={() => {
+              onClick={async () => {
+                // If there's a currently selected recording with unsaved input, save it first
+                if (
+                  selectedRecording &&
+                  selectedRecording.id !== recording.id
+                ) {
+                  await saveCurrentInputForRecording(selectedRecording.id);
+                }
+
                 // Clear unsaved inputs for all recordings except the one being clicked
                 setCurrentInputs((prev) => {
                   const newInputs: Record<string, string> = {};
