@@ -35,7 +35,7 @@ const App: React.FC = () => {
     <AuthProvider>
       <Router>
         <Routes>
-          <Route path="/" element={<Navigate to="/insights" replace />} />
+          <Route path="/" element={<Navigate to="/study" replace />} />
           <Route path="/signin" element={<SignInPage />} />
           <Route path="/onboarding" element={<OnboardingPage />} />
           <Route

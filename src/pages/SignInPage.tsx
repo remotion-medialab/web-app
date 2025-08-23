@@ -53,7 +53,7 @@ const SignInPage: React.FC = () => {
         console.warn("⚠️ Failed to load user condition after sign-in", e);
       }
 
-      navigate("/insights");
+      navigate("/study");
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";
@@ -93,7 +93,7 @@ const SignInPage: React.FC = () => {
         },
         { merge: true }
       );
-      navigate("/insights");
+      navigate("/study");
     } catch (error: unknown) {
       const errorMessage =
         error instanceof Error ? error.message : "Unknown error";

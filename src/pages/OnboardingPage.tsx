@@ -107,7 +107,7 @@ const OnboardingPage: React.FC = () => {
               </button>
               <button
                 onClick={() => {
-                  navigate("/insights");
+                  navigate("/study");
                 }}
                 className="border border-blue-600 text-blue-600 px-6 py-2 rounded-full hover:bg-blue-50"
               >
