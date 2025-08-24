@@ -657,7 +657,7 @@ const OverviewPage: React.FC = () => {
                           className="text-sm font-bold sm:mb-2"
                           style={{ color: "#545454" }}
                         >
-                          With your best effort, please identify obstacles as
+                          Q3. With your best effort, please identify obstacles as
                           much as you can.
                         </p>
                       </div>
