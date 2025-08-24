@@ -985,7 +985,7 @@ const OverviewPage: React.FC = () => {
                           className="text-sm font-bold "
                           style={{ color: "#545454" }}
                         >
-                          With your best effort, please identify obstacles for
+                          With your best effort, please identify obstacles or challenges in
                           each stage as much as you can.
                         </p>
                       </div>
@@ -995,7 +995,7 @@ const OverviewPage: React.FC = () => {
                           className="text-sm font-medium mb-1"
                           style={{ color: "#545454" }}
                         >
-                          Q4. {promptsConditionBC.q4}
+                          Q3. {promptsConditionBC.q4}
                         </label>
                         <div className="space-y-4">
                           {/* Situation Obstacles */}
@@ -1055,8 +1055,7 @@ const OverviewPage: React.FC = () => {
                               className="text-sm font-medium"
                               style={{ color: "#545454" }}
                             >
-                              Are there any inner obstacles in how you modify
-                              the situation?
+                              Could the way you’re trying to change the situation be making things more challenging?
                             </h4>
                             {formData.obstaclesObj.ModificationObstacle.map(
                               (obstacle, idx) => (
@@ -1113,8 +1112,7 @@ const OverviewPage: React.FC = () => {
                               className="text-sm font-medium"
                               style={{ color: "#545454" }}
                             >
-                              Are there any inner obstacles in what you focus
-                              on?
+                              Could what you are focusing on be making things more challenging?
                             </h4>
                             {formData.obstaclesObj.AttentionObstacle.map(
                               (obstacle, idx) => (
@@ -1171,8 +1169,7 @@ const OverviewPage: React.FC = () => {
                               className="text-sm font-medium"
                               style={{ color: "#545454" }}
                             >
-                              Are there any inner obstacles in how you interpret
-                              the situation?
+                              Could the way you’re interpreting things be making things more challenging?
                             </h4>
                             {formData.obstaclesObj.InterpretationObstacle.map(
                               (obstacle, idx) => (
@@ -1229,7 +1226,7 @@ const OverviewPage: React.FC = () => {
                               className="text-sm font-medium"
                               style={{ color: "#545454" }}
                             >
-                              Are there any inner obstacles in how you react?
+                              Could the way you’re responding to the situation be making things more challenging?
                             </h4>
                             {formData.obstaclesObj.ReactionObstacle.map(
                               (obstacle, idx) => (
