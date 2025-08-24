@@ -668,7 +668,7 @@ const OverviewPage: React.FC = () => {
                           className="text-sm font-medium mb-1"
                           style={{ color: "#545454" }}
                         >
-                          Q3. {promptsConditionA[2]}
+                          {promptsConditionA[2]}
                         </label>
                         <div className="space-y-2">
                           {formData.obstacles.map((obstacle, idx) => (
@@ -732,7 +732,7 @@ const OverviewPage: React.FC = () => {
                           className="text-sm font-bold  sm:mb-2"
                           style={{ color: "#545454" }}
                         >
-                          With your best effort, please plan as much as you can.
+                         Q4. With your best effort, please plan as much as you can.
                         </p>
                       </div>
                       {/* Q4: Overcome Plans */}
@@ -741,7 +741,7 @@ const OverviewPage: React.FC = () => {
                           className="text-sm font-medium mb-1"
                           style={{ color: "#545454" }}
                         >
-                          Q4. {promptsConditionA[3]}
+                          {promptsConditionA[3]}
                         </label>
                         <div className="space-y-2">
                           {formData.overcomePlans.map((plan, idx) => (
@@ -859,7 +859,7 @@ const OverviewPage: React.FC = () => {
                           className="text-sm font-bold "
                           style={{ color: "#545454" }}
                         >
-                          With your best effort, please identify obstacles for
+                          Q3. With your best effort, please identify obstacles for
                           each stage as much as you can.
                         </p>
                       </div>
@@ -869,7 +869,7 @@ const OverviewPage: React.FC = () => {
                           className="text-sm font-medium mb-1"
                           style={{ color: "#545454" }}
                         >
-                          Q3. {promptsConditionBC.q4}
+                          {promptsConditionBC.q4}
                         </label>
                         <div className="space-y-4">
                           {/* Situation Obstacles */}
