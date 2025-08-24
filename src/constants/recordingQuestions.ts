@@ -15,7 +15,7 @@ export const getQuestionForStep = (
   );
 
   // For condition A, return different text for the first question
-  if (condition === "A" && stepNumber === 0) {
+  if (condition === "A") {
     console.log(
       `✅ Condition A detected for step 0, returning custom question`
     );

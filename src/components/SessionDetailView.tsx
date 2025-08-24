@@ -83,7 +83,7 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
     );
 
     // For condition A, step 0, use different question
-    if (condition === "A" && stepNumber === 0) {
+    if (condition === "A") {
       console.log(
         `✅ Condition A detected for step 0, returning "What could you have done differently?"`
       );
@@ -711,9 +711,9 @@ const SessionDetailView: React.FC<SessionDetailViewProps> = ({
                     console.log(
                       `🔍 Recording ${recording.id} - stepNumber: ${recording.stepNumber}, recording.question: "${recording.question}", condition: ${condition}`
                     );
-                    // For condition A, always use the condition-based question for step 0
+                    // For condition A, always use the condition-based question
                     const questionText =
-                      condition === "A" && recording.stepNumber === 0
+                      condition === "A"
                         ? getQuestionForStep(recording.stepNumber, condition)
                         : recording.question ||
                           getQuestionForStep(recording.stepNumber, condition);
