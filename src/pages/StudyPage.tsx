@@ -1171,7 +1171,7 @@ const OverviewPage: React.FC = () => {
                           className="text-sm font-bold sm:mt-5"
                           style={{ color: "#545454" }}
                         >
-                          With your best effort, please plan for each stage as
+                         Q4. With your best effort, please plan for each stage as
                           much as you can.
                         </p>
                       </div>
@@ -1181,7 +1181,7 @@ const OverviewPage: React.FC = () => {
                           className="text-sm font-medium mb-3"
                           style={{ color: "#545454" }}
                         >
-                          Q4. {promptsConditionBC.q5}
+                          {promptsConditionBC.q5}
                         </label>
                         <div className="space-y-4">
                           {/* Situation Plans */}
