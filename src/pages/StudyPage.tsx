@@ -929,8 +929,7 @@ const OverviewPage: React.FC = () => {
                               className="text-sm font-medium"
                               style={{ color: "#545454" }}
                             >
-                              Are there any inner obstacles in how you modify
-                              the situation?
+                              Could the way you’re trying to change the situation be making things more challenging?
                             </h4>
                             {formData.obstaclesObj.ModificationObstacle.map(
                               (obstacle, idx) => (
@@ -987,8 +986,7 @@ const OverviewPage: React.FC = () => {
                               className="text-sm font-medium"
                               style={{ color: "#545454" }}
                             >
-                              Are there any inner obstacles in what you focus
-                              on?
+                              Could what you are focusing on make the situation more challenging?
                             </h4>
                             {formData.obstaclesObj.AttentionObstacle.map(
                               (obstacle, idx) => (
@@ -1045,8 +1043,7 @@ const OverviewPage: React.FC = () => {
                               className="text-sm font-medium"
                               style={{ color: "#545454" }}
                             >
-                              Are there any inner obstacles in how you interpret
-                              the situation?
+                               Could the way you’re interpreting things be making things more challenging?
                             </h4>
                             {formData.obstaclesObj.InterpretationObstacle.map(
                               (obstacle, idx) => (
@@ -1103,7 +1100,7 @@ const OverviewPage: React.FC = () => {
                               className="text-sm font-medium"
                               style={{ color: "#545454" }}
                             >
-                              Are there any inner obstacles in how you react?
+                              Could the way you’re reacting to the situation be making things more challenging?
                             </h4>
                             {formData.obstaclesObj.ReactionObstacle.map(
                               (obstacle, idx) => (

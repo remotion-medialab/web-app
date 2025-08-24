@@ -39,7 +39,7 @@ const promptsConditionBC = {
   q1: "What is your most important wish or concern in your interpersonal life that you have recurring regrets about and want to change? Choose something challenging that you are likely to face in the next few days.",
   q2: "If you fulfilled this wish or goal, what would be the best possible outcome?",
   q3: "What is it within you that holds you back from fulfilling your wish?",
-  q4: "Are there any inner obstacles in how you select or avoid the situation?",
+  q4: "Are there any obstacles or challenges in how you select or avoid the situation?",
   q5: "Let's write all the actions you can take or thoughts you can think to overcome your obstacles.",
 };
 
