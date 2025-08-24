@@ -30,8 +30,8 @@ const prompts = [
 const promptsConditionA = [
   "What is your most important wish or concern in your interpersonal life that you have recurring regrets about and want to change?  Choose something challenging that you are likely to face in the next few days.",
   "If you fulfilled this wish or goal, what would be the best possible outcome?",
-  "What is it within you—your habits, reactions, or thoughts—that most holds you back from fulfilling this wish?",
-  "List all the actions you could take or thoughts you could use to overcome this obstacle.",
+  "What is it within you—your actions, reactions, or thoughts—that most holds you back from fulfilling this wish?",
+  "List all the alternative actions, reactions, or thoughts you can do differently to overcome this obstacle.",
 ];
 
 // prompts for the Weekly Plan textarea fields (conditions B and C)
