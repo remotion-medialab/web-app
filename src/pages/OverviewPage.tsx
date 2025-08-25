@@ -986,8 +986,8 @@ const OverviewPage: React.FC = () => {
                           className="text-sm font-bold "
                           style={{ color: "#545454" }}
                         >
-                          With your best effort, please identify obstacles or challenges in
-                          each stage as much as you can.
+                          With your best effort, please identify obstacles or
+                          challenges in each stage as much as you can.
                         </p>
                       </div>
                       {/* Q4: Obstacles */}
@@ -1056,7 +1056,8 @@ const OverviewPage: React.FC = () => {
                               className="text-sm font-medium"
                               style={{ color: "#545454" }}
                             >
-                              Could the way you’re trying to change the situation be making things more challenging?
+                              Could the way you’re trying to change the
+                              situation be making things more challenging?
                             </h4>
                             {formData.obstaclesObj.ModificationObstacle.map(
                               (obstacle, idx) => (
@@ -1113,7 +1114,8 @@ const OverviewPage: React.FC = () => {
                               className="text-sm font-medium"
                               style={{ color: "#545454" }}
                             >
-                              Could what you are focusing on be making things more challenging?
+                              Could what you are focusing on be making things
+                              more challenging?
                             </h4>
                             {formData.obstaclesObj.AttentionObstacle.map(
                               (obstacle, idx) => (
@@ -1170,7 +1172,8 @@ const OverviewPage: React.FC = () => {
                               className="text-sm font-medium"
                               style={{ color: "#545454" }}
                             >
-                              Could the way you’re interpreting things be making things more challenging?
+                              Could the way you’re interpreting things be making
+                              things more challenging?
                             </h4>
                             {formData.obstaclesObj.InterpretationObstacle.map(
                               (obstacle, idx) => (
@@ -1227,7 +1230,8 @@ const OverviewPage: React.FC = () => {
                               className="text-sm font-medium"
                               style={{ color: "#545454" }}
                             >
-                              Could the way you’re responding to the situation be making things more challenging?
+                              Could the way you’re responding to the situation
+                              be making things more challenging?
                             </h4>
                             {formData.obstaclesObj.ReactionObstacle.map(
                               (obstacle, idx) => (
