@@ -10,6 +10,7 @@ import {
   doc,
 } from "firebase/firestore";
 import { db } from "./firebase";
+import { getDateKey } from "../hooks/useRecordings";
 
 export interface CounterfactualData {
   generatedCfTexts: string[]; // Array of 5 generated counterfactual texts
@@ -450,7 +451,7 @@ export class RecordingsService {
     const recordingsByDay: Record<string, RecordingSession[]> = {};
 
     sessions.forEach((session) => {
-      const dayKey = session.completedAt.toISOString().split("T")[0]; // YYYY-MM-DD
+      const dayKey = getDateKey(session.completedAt); // Use timezone-safe date key
 
       if (!recordingsByDay[dayKey]) {
         recordingsByDay[dayKey] = [];

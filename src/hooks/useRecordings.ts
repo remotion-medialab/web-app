@@ -17,6 +17,14 @@ export interface UseRecordingsReturn {
   } | null;
 }
 
+// Helper function to get date key in YYYY-MM-DD format preserving local timezone
+export const getDateKey = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  return `${year}-${month}-${day}`;
+};
+
 export const useRecordings = (userId: string | null): UseRecordingsReturn => {
   const [sessions, setSessions] = useState<RecordingSession[]>([]);
   const [sessionsByDay, setSessionsByDay] = useState<Record<string, RecordingSession[]>>({});
@@ -53,7 +61,7 @@ export const useRecordings = (userId: string | null): UseRecordingsReturn => {
       // Generate sessionsByDay from already-fetched sessions (avoid duplicate fetch)
       const sessionsByDayData: Record<string, RecordingSession[]> = {};
       sessionsData.forEach(session => {
-        const dayKey = session.completedAt.toISOString().split('T')[0]; // YYYY-MM-DD
+        const dayKey = getDateKey(session.completedAt); // Use timezone-safe date key
         if (!sessionsByDayData[dayKey]) {
           sessionsByDayData[dayKey] = [];
         }

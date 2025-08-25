@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from "react";
 import { addDays, startOfWeek, format } from "date-fns";
 import { useAuth } from "../contexts/AuthContext";
-import { useRecordings } from "../hooks/useRecordings";
+import { useRecordings, getDateKey } from "../hooks/useRecordings";
 import type { RecordingSession } from "../lib/recordingsService";
 import SessionDetailView from "../components/SessionDetailView";
 import StickyIcon from "../assets/stickynote.svg";
@@ -180,7 +180,8 @@ const OverviewPage: React.FC = () => {
   } = useRecordings(userId);
 
   const getSessionsForDate = (date: Date): RecordingSession[] => {
-    const dateKey = date.toISOString().split("T")[0];
+    // Use timezone-safe date key formatting to match the sessionsByDay keys
+    const dateKey = getDateKey(date);
     return sessionsByDay[dateKey] || [];
   };
 
